@@ -1,0 +1,24 @@
+{
+  "name": "vysera",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vysera - AI-Powered Video Creation Platform",
+  "scripts": {
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
+    "typecheck": "npm run typecheck --prefix frontend && npm run typecheck --prefix backend",
+    "db:migrate": "npm run prisma:migrate --prefix backend",
+    "db:seed": "npm run prisma:seed --prefix backend",
+    "db:studio": "npm run prisma:studio --prefix backend",
+    "setup": "npm run install:all && npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
