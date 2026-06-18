@@ -1,4 +1,4 @@
-import { PrismaClient, ExportFormat } from '@prisma/client';
+import { PrismaClient, ExportFormat, ExportResolution } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
@@ -143,7 +143,7 @@ class PipelineService {
           projectId: job.projectId,
           userId: job.userId,
           format: (job.options.format as ExportFormat) || 'mp4',
-          resolution: job.options.resolution || null,
+          resolution: (job.options.resolution as ExportResolution) || undefined,
           quality: job.options.quality || null,
           fileUrl: outputUrl,
           fileSize: outputStats.size,

@@ -56,7 +56,7 @@ router.post('/create', async (req: Request, res: Response) => {
 
 router.get('/job/:jobId', (req: Request, res: Response) => {
   try {
-    const job = pipelineService.getJob(req.params.jobId);
+    const job = pipelineService.getJob(req.params.jobId!);
     if (!job) {
       res.status(404).json({ error: 'Job not found' });
       return;
@@ -67,7 +67,7 @@ router.get('/job/:jobId', (req: Request, res: Response) => {
       return;
     }
 
-    const progress = progressService.getProgress(req.params.jobId);
+    const progress = progressService.getProgress(req.params.jobId!);
 
     res.json({ job, progress: progress || null });
   } catch (error) {
@@ -88,7 +88,7 @@ router.get('/jobs', (req: Request, res: Response) => {
 
 router.post('/cancel/:jobId', (req: Request, res: Response) => {
   try {
-    const cancelled = pipelineService.cancelJob(req.params.jobId, req.user!.userId);
+    const cancelled = pipelineService.cancelJob(req.params.jobId!, req.user!.userId);
     if (!cancelled) {
       res.status(404).json({ error: 'Job not found or cannot be cancelled' });
       return;
@@ -120,13 +120,13 @@ router.get('/templates', (req: Request, res: Response) => {
 
 router.get('/templates/:templateId', (req: Request, res: Response) => {
   try {
-    const template = getTemplate(req.params.templateId);
+    const template = getTemplate(req.params.templateId!);
     if (!template) {
       res.status(404).json({ error: 'Template not found' });
       return;
     }
 
-    const config = getTemplateConfig(req.params.templateId);
+    const config = getTemplateConfig(req.params.templateId!);
     res.json({ template, config });
   } catch (error) {
     logger.error('Get template error', { error: (error as Error).message });

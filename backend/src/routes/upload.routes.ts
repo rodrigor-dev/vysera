@@ -147,7 +147,7 @@ router.get('/list', async (req: Request, res: Response) => {
 
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    await uploadService.deleteFile(req.params.id, req.user!.userId);
+    await uploadService.deleteFile(req.params.id!, req.user!.userId);
     res.json({ message: 'Upload deleted successfully' });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
@@ -157,7 +157,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const upload = await uploadService.getUploadById(req.params.id, req.user!.userId);
+    const upload = await uploadService.getUploadById(req.params.id!, req.user!.userId);
     if (!upload) {
       res.status(404).json({ error: 'Upload not found' });
       return;

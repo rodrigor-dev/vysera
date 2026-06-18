@@ -1,4 +1,4 @@
-import Stripe from 'stripe';
+import StripeConstructor from 'stripe';
 import { PrismaClient } from '@prisma/client';
 import logger from '@/config/logger';
 import { config } from '@/config';
@@ -6,14 +6,14 @@ import { createSubscription, updateSubscription, createInvoice, syncUserRole } f
 
 const prisma = new PrismaClient();
 
-let stripe: Stripe | null = null;
+let stripe: any = null;
 
-function getStripe(): Stripe {
+function getStripe(): any {
   if (!stripe) {
     if (!config.stripe.secretKey) {
       throw new Error('Stripe secret key not configured');
     }
-    stripe = new Stripe(config.stripe.secretKey, {
+    stripe = new StripeConstructor(config.stripe.secretKey, {
       apiVersion: '2025-02-24.acacia' as any,
     });
   }
@@ -88,7 +88,7 @@ export async function handleWebhook(
     throw new Error('Stripe webhook secret not configured');
   }
 
-  let event: Stripe.Event;
+  let event: any;
   try {
     event = getStripe().webhooks.constructEvent(body, signature, config.stripe.webhookSecret);
   } catch (err) {
@@ -100,27 +100,27 @@ export async function handleWebhook(
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session: any = event.data.object;
         await handleCheckoutCompleted(session);
         break;
       }
       case 'invoice.paid': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice: any = event.data.object;
         await handleInvoicePaid(invoice);
         break;
       }
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice: any = event.data.object;
         await handleInvoicePaymentFailed(invoice);
         break;
       }
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription: any = event.data.object;
         await handleSubscriptionUpdated(subscription);
         break;
       }
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription: any = event.data.object;
         await handleSubscriptionDeleted(subscription);
         break;
       }
@@ -137,7 +137,7 @@ export async function handleWebhook(
   return { received: true };
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+async function handleCheckoutCompleted(session: any): Promise<void> {
   const userId = session.metadata?.userId;
   if (!userId) {
     logger.warn('Checkout session missing userId metadata', { sessionId: session.id });
@@ -173,7 +173,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   logger.info('Stripe checkout completed', { userId, subscriptionId });
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+async function handleInvoicePaid(invoice: any): Promise<void> {
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
 
@@ -218,7 +218,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
   logger.info('Stripe invoice paid', { invoiceId: invoice.id, subscriptionId });
 }
 
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+async function handleInvoicePaymentFailed(invoice: any): Promise<void> {
   const subscriptionId = invoice.subscription as string;
   if (!subscriptionId) return;
 
@@ -233,7 +233,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void
   logger.warn('Stripe invoice payment failed', { invoiceId: invoice.id, subscriptionId });
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+async function handleSubscriptionUpdated(subscription: any): Promise<void> {
   const sub = await prisma.subscription.findFirst({
     where: { provider: 'stripe', providerSubscriptionId: subscription.id },
   });
@@ -269,7 +269,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
   });
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
+async function handleSubscriptionDeleted(subscription: any): Promise<void> {
   const sub = await prisma.subscription.findFirst({
     where: { provider: 'stripe', providerSubscriptionId: subscription.id },
   });

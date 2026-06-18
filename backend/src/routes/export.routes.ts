@@ -5,7 +5,7 @@ import fs from 'fs';
 import { authenticate } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/security';
 import { createExport, cancelExport, getExportProgress, cleanupOldExports } from '../services/video/export.service';
-import { renderGuardService } from '../services/video/render-guard.service';
+import { renderGuardService } from '../services/security/render-guard.service';
 import { getPlatformConfig, getAllPlatforms, RESOLUTION_CONFIGS, FORMAT_CONFIGS, FPS_OPTIONS } from '../services/video/platform-optimizer.service';
 import { renderQueueService } from '../services/video/render-queue.service';
 import logger from '../config/logger';
@@ -73,7 +73,7 @@ router.post('/create', exportLimiter, async (req: Request, res: Response) => {
       fps: fps || 30,
       quality: quality || 'standard',
       platform,
-      inputPath: project.videoUrl || '',
+      inputPath: (project as any).videoUrl || '',
       projectName: project.title,
     });
 

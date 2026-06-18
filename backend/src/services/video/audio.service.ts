@@ -40,7 +40,7 @@ export async function extractAudio(
   return new Promise<string>((resolve, reject) => {
     const command = ffmpeg(videoPath)
       .audioCodec(audioCodec)
-      .audioBitrate(format === 'wav' ? undefined : '192k')
+      .audioBitrate((format === 'wav' ? undefined : '192k') as string | number)
       .audioChannels(2)
       .audioFrequency(44100)
       .output(outputPath);
@@ -267,7 +267,7 @@ export async function mixAudio(
     ffmpeg()
       .input(extractedAudioPath)
       .input(audioPath)
-      .complexFilters([
+      .complexFilter([
         {
           filter: 'amix',
           options: {
@@ -344,7 +344,7 @@ export async function mixAudioWithDucking(
       ffmpeg()
         .input(extractedAudioPath)
         .input(musicPath)
-        .complexFilters([
+        .complexFilter([
           {
             filter: 'volume',
             options: `'${volumeExpr}'`,
@@ -625,7 +625,7 @@ export async function crossfadeAudio(
     ffmpeg()
       .input(inputA)
       .input(inputB)
-      .complexFilters([
+      .complexFilter([
         {
           filter: 'acrossfade',
           options: {

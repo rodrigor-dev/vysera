@@ -72,7 +72,7 @@ router.get('/users/:id', auditLog('ADMIN_GET_USER', 'user'), async (req: Request
 router.put('/users/:id/role', validate({ body: updateRoleSchema }), auditLog('ADMIN_UPDATE_ROLE', 'user'), async (req: Request, res: Response) => {
   try {
     const { role } = req.body;
-    const user = await updateRole(req.params.id, role, req.user!.userId);
+    const user = await updateRole(req.params.id!, role, req.user!.userId);
     res.json({ message: 'User role updated', user });
   } catch (error) {
     const err = error as Error & { statusCode?: number };
@@ -83,7 +83,7 @@ router.put('/users/:id/role', validate({ body: updateRoleSchema }), auditLog('AD
 
 router.delete('/users/:id', auditLog('ADMIN_DELETE_USER', 'user'), async (req: Request, res: Response) => {
   try {
-    await deleteUser(req.params.id, req.user!.userId);
+    await deleteUser(req.params.id!, req.user!.userId);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     const err = error as Error & { statusCode?: number };

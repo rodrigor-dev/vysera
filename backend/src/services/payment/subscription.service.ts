@@ -63,7 +63,7 @@ export async function updateSubscription(
       ...(data.currentPeriodStart !== undefined && { currentPeriodStart: data.currentPeriodStart }),
       ...(data.currentPeriodEnd !== undefined && { currentPeriodEnd: data.currentPeriodEnd }),
       ...(data.canceledAt !== undefined && { canceledAt: data.canceledAt }),
-      ...(data.metadata && { metadata: data.metadata }),
+      ...(data.metadata && { metadata: data.metadata as any }),
     },
   });
 
@@ -329,7 +329,7 @@ export async function createInvoice(data: {
       description: data.description,
       paymentMethod: data.paymentMethod,
       paidAt: data.paidAt || new Date(),
-      metadata: data.metadata,
+      metadata: data.metadata as any,
     },
   });
 }

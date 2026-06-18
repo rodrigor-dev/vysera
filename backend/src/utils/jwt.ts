@@ -20,7 +20,7 @@ export function generateAccessToken(user: { id: string; email: string; role: str
     role: user.role,
   };
   return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
+    expiresIn: config.jwt.expiresIn as any,
   });
 }
 
@@ -28,7 +28,7 @@ export function generateRefreshToken(userId: string): { token: string; jti: stri
   const jti = uuidv4();
   const payload: RefreshTokenPayload = { userId, jti };
   const token = jwt.sign(payload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
+    expiresIn: config.jwt.refreshExpiresIn as any,
   });
   return { token, jti };
 }

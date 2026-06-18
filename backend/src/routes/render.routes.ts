@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticate, adminOnly } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/security';
 import { renderQueueService } from '../services/video/render-queue.service';
-import { renderGuardService } from '../services/video/render-guard.service';
+import { renderGuardService } from '../services/security/render-guard.service';
 import logger from '../config/logger';
 
 const router = Router();
@@ -23,7 +23,7 @@ router.get('/status', (_req: Request, res: Response) => {
 
 router.get('/job/:jobId', (req: Request, res: Response) => {
   try {
-    const status = renderQueueService.getStatus(req.params.jobId);
+    const status = renderQueueService.getStatus(req.params.jobId!);
     if (!status) {
       res.status(404).json({ error: 'Job not found in queue' });
       return;
@@ -37,7 +37,7 @@ router.get('/job/:jobId', (req: Request, res: Response) => {
 
 router.post('/cancel/:jobId', (req: Request, res: Response) => {
   try {
-    const cancelled = renderQueueService.cancel(req.params.jobId, req.user!.userId);
+    const cancelled = renderQueueService.cancel(req.params.jobId!, req.user!.userId);
     res.json({ message: cancelled ? 'Job cancelled' : 'Job not found or not yours' });
   } catch (error) {
     logger.error('Cancel render job error', { error: (error as Error).message });
@@ -59,7 +59,7 @@ router.get('/admin/queue', (_req: Request, res: Response) => {
 
 router.post('/admin/requeue/:jobId', (req: Request, res: Response) => {
   try {
-    const status = renderQueueService.getStatus(req.params.jobId);
+    const status = renderQueueService.getStatus(req.params.jobId!);
     if (!status) {
       res.status(404).json({ error: 'Job not found' });
       return;
@@ -73,7 +73,7 @@ router.post('/admin/requeue/:jobId', (req: Request, res: Response) => {
 
 router.get('/admin/usage/:userId', (req: Request, res: Response) => {
   try {
-    const stats = renderGuardService.getUsageStats(req.params.userId, 'admin');
+    const stats = renderGuardService.getUsageStats(req.params.userId!, 'admin');
     res.json(stats);
   } catch (error) {
     logger.error('Admin usage error', { error: (error as Error).message });
