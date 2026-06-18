@@ -177,7 +177,7 @@ export async function searchPixabay(query: string, page: number = 1, perPage: nu
       return MOCK_TRACKS.filter(t => t.source === 'pixabay' && (!query || t.title.toLowerCase().includes(query.toLowerCase())));
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     const hits: PixabayHit[] = data.hits || [];
 
     return hits.map((hit: PixabayHit) => ({
@@ -215,7 +215,7 @@ export async function searchMixkit(query: string, page: number = 1, perPage: num
       return MOCK_TRACKS.filter(t => t.source === 'mixkit' && (!query || t.title.toLowerCase().includes(query.toLowerCase())));
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     const items: MixkitItem[] = data.data || [];
 
     return items.map((item: MixkitItem) => ({
@@ -253,7 +253,7 @@ export async function searchFMA(query: string, page: number = 1, limit: number =
       return MOCK_TRACKS.filter(t => t.source === 'fma' && (!query || t.title.toLowerCase().includes(query.toLowerCase())));
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     const records: FMARecord[] = data.data || [];
 
     return records.map((record: FMARecord) => ({

@@ -145,7 +145,7 @@ async function handlePaymentNotification(data: Record<string, unknown> | undefin
 
   if (!response.ok) return;
 
-  const payment = await response.json();
+  const payment: any = await response.json();
   const userId = payment.metadata?.userId as string | undefined;
   if (!userId) return;
 
@@ -194,7 +194,7 @@ async function handleSubscriptionNotification(
 
   if (!response.ok) return;
 
-  const preapproval = await response.json();
+  const preapproval: any = await response.json();
   const userId = preapproval.metadata?.userId as string | undefined;
   if (!userId) return;
 
@@ -249,7 +249,7 @@ async function handleAuthorizedPayment(
 
   if (!response.ok) return;
 
-  const payment = await response.json();
+  const payment: any = await response.json();
   const sub = await prisma.subscription.findFirst({
     where: { provider: 'mercadopago', providerSubscriptionId: payment.preapproval_id?.toString() },
   });
