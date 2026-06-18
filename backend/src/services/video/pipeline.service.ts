@@ -31,11 +31,13 @@ export interface ProcessingResult {
   height: number;
 }
 
+export type PipelineJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
 export interface PipelineJob {
   id: string;
   userId: string;
   projectId: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  status: PipelineJobStatus;
   progress: number;
   stage: string;
   options: ProcessingOptions;

@@ -1,12 +1,12 @@
-import xss from 'xss';
+import xss, { FilterXSS, IFilterXSSOptions } from 'xss';
 
-const xssOptions: xss.IFilterXSSOptions = {
+const xssOptions: IFilterXSSOptions = {
   whiteList: {},
   stripIgnoreTag: true,
   stripIgnoreTagBody: ['script', 'style', 'iframe', 'object', 'embed'],
 };
 
-const xssFilter = new xss.FilterXSS(xssOptions);
+const xssFilter = new FilterXSS(xssOptions);
 
 export function sanitizeHtml(input: string): string {
   return xssFilter.process(input);

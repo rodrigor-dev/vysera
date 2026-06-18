@@ -25,7 +25,7 @@ export interface CaptionStyle {
   primaryColor: string;
   backgroundColor: string;
   position: 'bottom' | 'top' | 'center';
-  animation: 'none' | 'fade' | 'slide' | 'karaoke' | 'typewriter' | 'tiktok';
+  animation: 'none' | 'fade' | 'slide' | 'karaoke' | 'typewriter' | 'tiktok' | 'shorts';
   highlightColor: string;
   outlineColor: string;
   outlineWidth: number;
