@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuid } from 'uuid';
-import logger from '@/config/logger';
-import { config } from '@/config';
+import logger from '../config/logger';
+import { config } from '../config';
 
 export interface MusicTrack {
   id: string;

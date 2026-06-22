@@ -2,7 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs/promises';
 import path from 'path';
 import { execFile } from 'child_process';
-import logger from '@/config/logger';
+import logger from '../config/logger';
 
 export interface VideoInfo {
   duration: number;
