@@ -34,35 +34,59 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (isLoading) => set({ isLoading }),
 
       login: async (email, password) => {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-          credentials: "include",
-        });
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.error || "Invalid email or password");
-        set({
-          user: body.user ?? { id: body.userId, email, name: body.name ?? null, role: body.role ?? "user", proExpiresAt: null, createdAt: new Date().toISOString() },
-          accessToken: body.accessToken ?? null,
-          isLoading: false,
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+            credentials: "include",
+            signal: controller.signal,
+          });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || "Invalid email or password");
+          set({
+            user: body.user ?? { id: body.userId, email, name: body.name ?? null, role: body.role ?? "user", avatarUrl: null, proExpiresAt: null, createdAt: new Date().toISOString() },
+            accessToken: body.accessToken ?? null,
+            isLoading: false,
+          });
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            throw new Error("Connection timeout. Please try again.");
+          }
+          throw err;
+        } finally {
+          clearTimeout(timeout);
+        }
       },
 
       register: async (email, password, name) => {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name }),
-          credentials: "include",
-        });
-        const body = await res.json();
-        if (!res.ok) throw new Error(body.error || "Registration failed");
-        set({
-          user: body.user ?? null,
-          accessToken: body.accessToken ?? null,
-          isLoading: false,
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+        try {
+          const res = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, name }),
+            credentials: "include",
+            signal: controller.signal,
+          });
+          const body = await res.json();
+          if (!res.ok) throw new Error(body.error || "Registration failed");
+          set({
+            user: body.user ?? null,
+            accessToken: body.accessToken ?? null,
+            isLoading: false,
+          });
+        } catch (err) {
+          if ((err as Error).name === "AbortError") {
+            throw new Error("Connection timeout. Please try again.");
+          }
+          throw err;
+        } finally {
+          clearTimeout(timeout);
+        }
       },
 
       logout: async () => {
@@ -75,7 +99,10 @@ export const useAuthStore = create<AuthState>()(
 
       refreshSession: async () => {
         try {
-          const res = await fetch("/api/auth/me", { credentials: "include" });
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 15000);
+          const res = await fetch("/api/auth/me", { credentials: "include", signal: controller.signal });
+          clearTimeout(timeout);
           if (res.ok) {
             const body = await res.json();
             set({ user: body.user ?? null, isLoading: false });
