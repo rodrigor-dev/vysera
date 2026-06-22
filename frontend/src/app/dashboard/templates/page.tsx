@@ -107,10 +107,10 @@ export default function TemplatesPage() {
         setIsLoading(true);
         const params = new URLSearchParams({ limit: "30" });
         if (activeCategory !== "All") params.set("category", activeCategory);
-        const response = await fetch(`/api/templates?${params}`);
+        const response = await fetch(`/api/video/templates?${params}`);
         if (!response.ok) throw new Error("Failed to load templates");
         const data = await response.json();
-        setTemplates(data.data ?? []);
+        setTemplates(data.templates ?? []);
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"));
       } finally {
