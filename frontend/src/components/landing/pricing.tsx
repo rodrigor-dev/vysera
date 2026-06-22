@@ -42,10 +42,10 @@ const plans = [
     ],
   },
   {
-    name: "Enterprise",
+    name: "Ultra",
     description: "For teams & businesses",
-    price: { monthly: "Custom", annual: "Custom" },
-    period: "",
+    price: { monthly: "R$29", annual: "R$21,66" },
+    period: { monthly: "/month", annual: "/month" },
     featured: false,
     features: [
       { text: "Everything in Pro", included: true },
@@ -134,7 +134,7 @@ export function Pricing() {
           >
             Annual
             <span className="ml-1.5 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 px-2 py-0.5 text-xs font-medium text-primary">
-              Save up to 20%
+              Save up to 25%
             </span>
           </span>
         </motion.div>
@@ -234,7 +234,7 @@ export function Pricing() {
               </ul>
 
               <Link
-                href={plan.name === "Enterprise" ? "/contact" : "/auth/register"}
+                href={plan.name === "Ultra" ? "/contact" : "/auth/register"}
                 className={cn(
                   "inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-300",
                   plan.featured
@@ -242,7 +242,7 @@ export function Pricing() {
                     : "border border-border bg-background text-foreground hover:bg-accent"
                 )}
               >
-                {plan.name === "Enterprise" ? "Contact Sales" : "Get Started"}
+                {plan.name === "Ultra" ? "Contact Sales" : "Get Started"}
               </Link>
             </motion.div>
           ))}

@@ -57,7 +57,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: { monthly: "R$15", annual: "R$12,50" },
+    price: { monthly: "R$15", annual: "R$11,25" },
     description: "For professional content creators",
     features: [
       "Unlimited projects",
@@ -77,8 +77,8 @@ const plans = [
     priceIdAnnual: "price_pro_annual",
   },
   {
-    name: "Enterprise",
-    price: { monthly: "$49", annual: "$39" },
+    name: "Ultra",
+    price: { monthly: "R$29", annual: "R$21,66" },
     description: "For teams and organizations",
     features: [
       "Everything in Pro",
@@ -90,7 +90,7 @@ const plans = [
       "White-label exports",
     ],
     missing: [],
-    cta: "Contact Sales",
+    cta: "Upgrade to Ultra",
     popular: false,
     icon: Infinity,
     priceIdMonthly: "price_enterprise_monthly",
@@ -130,16 +130,16 @@ const planColors = [
 ];
 
 const comparisonFeatures = [
-  { name: "Projects", free: "3 max", pro: "Unlimited", enterprise: "Unlimited" },
-  { name: "Export Quality", free: "720p", pro: "4K", enterprise: "4K" },
-  { name: "Watermark", free: "Yes", pro: "No", enterprise: "No" },
-  { name: "Templates", free: "Basic", pro: "All", enterprise: "All + Custom" },
-  { name: "Uploads", free: "5/month", pro: "Unlimited", enterprise: "Unlimited" },
-  { name: "AI Voiceover", free: false, pro: true, enterprise: true },
-  { name: "Custom Branding", free: false, pro: true, enterprise: true },
-  { name: "Team Members", free: "1", pro: "5", enterprise: "Unlimited" },
-  { name: "Priority Support", free: false, pro: true, enterprise: true },
-  { name: "API Access", free: false, pro: false, enterprise: true },
+  { name: "Projects", free: "3 max", pro: "Unlimited", ultra: "Unlimited" },
+  { name: "Export Quality", free: "720p", pro: "4K", ultra: "4K" },
+  { name: "Watermark", free: "Yes", pro: "No", ultra: "No" },
+  { name: "Templates", free: "Basic", pro: "All", ultra: "All + Custom" },
+  { name: "Uploads", free: "5/month", pro: "Unlimited", ultra: "Unlimited" },
+  { name: "AI Voiceover", free: false, pro: true, ultra: true },
+  { name: "Custom Branding", free: false, pro: true, ultra: true },
+  { name: "Team Members", free: "1", pro: "5", ultra: "Unlimited" },
+  { name: "Priority Support", free: false, pro: true, ultra: true },
+  { name: "API Access", free: false, pro: false, ultra: true },
 ];
 
 const containerVariants = {
@@ -172,7 +172,7 @@ export default function UpgradePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleEnterprise = () => {
+  const handleUltra = () => {
     toast.success("We'll reach out to you shortly");
   };
 
@@ -190,7 +190,8 @@ export default function UpgradePage() {
 
   const annualPrice = (planName: string) => {
     if (planName === "Free") return "Grátis";
-    if (planName === "Pro") return "R$149,99/ano";
+    if (planName === "Pro") return "R$134,90/ano";
+    if (planName === "Ultra") return "R$259,90/ano";
     return "Personalizado";
   };
 
@@ -229,7 +230,7 @@ export default function UpgradePage() {
         >
           Annual
           <span className="absolute -right-1 -top-2.5 inline-flex items-center rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg shadow-emerald-500/25">
-            Save 20%
+            Save up to 25%
           </span>
         </button>
       </motion.div>
@@ -317,16 +318,27 @@ export default function UpgradePage() {
                   <Check className="h-4 w-4" />
                   Current Plan
                 </Button>
-              ) : plan.name === "Enterprise" ? (
-                <Button
-                  size="lg"
-                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg shadow-amber-500/25"
-                  onClick={handleEnterprise}
-                >
-                  Contact Sales
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
+              ) : plan.name === "Ultra" ? (
+                <div className="space-y-2">
+                  <Button
+                    size="lg"
+                    className="w-full gap-2 bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg shadow-amber-500/25"
+                    onClick={handleUltra}
+                  >
+                    Upgrade to Ultra
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <MPCheckout
+                    plan="enterprise"
+                    billingType={billing}
+                    className="w-full gap-2 border-border/50 text-muted-foreground/80"
+                    variant="outline"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Pay with Mercado Pago
+                  </MPCheckout>
+                </div>
+              ) : plan.name === "Pro" ? (
                 <div className="space-y-2">
                   <StripeCheckout
                     priceId={priceId || "price_pro_monthly"}
@@ -346,7 +358,7 @@ export default function UpgradePage() {
                     Pay with Mercado Pago
                   </MPCheckout>
                 </div>
-              )}
+              ) : null}
             </motion.div>
           );
         })}
@@ -373,7 +385,7 @@ export default function UpgradePage() {
                   <th className="py-4 text-left font-medium text-muted-foreground/70">Feature</th>
                   <th className="py-4 text-center font-medium text-muted-foreground/70">Free</th>
                   <th className="py-4 text-center font-medium text-primary">Pro</th>
-                  <th className="py-4 text-center font-medium text-muted-foreground/70">Enterprise</th>
+                  <th className="py-4 text-center font-medium text-muted-foreground/70">Ultra</th>
                 </tr>
               </thead>
               <tbody>
@@ -395,10 +407,10 @@ export default function UpgradePage() {
                       )}
                     </td>
                     <td className="py-4 text-center">
-                      {feature.enterprise === true ? (
+                      {feature.ultra === true ? (
                         <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-400" />
                       ) : (
-                        <span className="text-foreground/80">{feature.enterprise}</span>
+                        <span className="text-foreground/80">{feature.ultra}</span>
                       )}
                     </td>
                   </tr>

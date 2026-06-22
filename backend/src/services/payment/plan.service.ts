@@ -66,7 +66,7 @@ export const PLANS: Record<string, PlanConfig> = {
     id: 'pro',
     name: 'Pro',
     role: 'pro',
-    price: { monthly: 1500, annual: 14999 },
+    price: { monthly: 1500, annual: 13490 },
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID,
     features: {
       maxProjects: 999,
@@ -93,9 +93,9 @@ export const PLANS: Record<string, PlanConfig> = {
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: 'Ultra',
     role: 'admin',
-    price: { monthly: 4900, annual: 39900 },
+    price: { monthly: 2900, annual: 25990 },
     features: {
       maxProjects: 9999,
       maxExportsPerDay: 999,

@@ -40,7 +40,7 @@ interface AdminLogEntry {
 const mockLogs: AdminLogEntry[] = [
   { id: "1", admin: "admin@vysera.com", action: "user.delete", target: "alice@example.com", ip: "192.168.1.100", date: "2024-06-15 14:32:10", details: "Deleted user account" },
   { id: "2", admin: "admin@vysera.com", action: "user.role.update", target: "bob@example.com", ip: "192.168.1.100", date: "2024-06-15 14:30:00", details: "Changed role from user to pro" },
-  { id: "3", admin: "superadmin@vysera.com", action: "payment.refund", target: "INV-003", ip: "10.0.0.50", date: "2024-06-15 14:25:00", details: "Refunded payment of $29.99" },
+  { id: "3", admin: "superadmin@vysera.com", action: "payment.refund", target: "INV-003", ip: "10.0.0.50", date: "2024-06-15 14:25:00", details: "Refunded payment of $15.00" },
   { id: "4", admin: "admin@vysera.com", action: "settings.update", target: "system", ip: "192.168.1.100", date: "2024-06-15 14:20:00", details: "Updated email template settings" },
   { id: "5", admin: "superadmin@vysera.com", action: "admin.create", target: "newadmin@vysera.com", ip: "10.0.0.50", date: "2024-06-15 14:15:00", details: "Created new admin account" },
   { id: "6", admin: "admin@vysera.com", action: "project.delete", target: "project_123", ip: "192.168.1.100", date: "2024-06-15 14:10:00", details: "Deleted project due to TOS violation" },

@@ -46,11 +46,11 @@ const revenueData = [
 ];
 
 const recentTransactions = [
-  { id: "1", user: "Alice Johnson", amount: 29.99, type: "subscription", status: "completed", date: "2024-06-15" },
-  { id: "2", user: "Bob Smith", amount: 299.99, type: "subscription", status: "completed", date: "2024-06-14" },
-  { id: "3", user: "Carol White", amount: 29.99, type: "subscription", status: "pending", date: "2024-06-13" },
+  { id: "1", user: "Alice Johnson", amount: 15.00, type: "subscription", status: "completed", date: "2024-06-15" },
+  { id: "2", user: "Bob Smith", amount: 134.90, type: "subscription", status: "completed", date: "2024-06-14" },
+  { id: "3", user: "Carol White", amount: 29.00, type: "subscription", status: "pending", date: "2024-06-13" },
   { id: "4", user: "David Brown", amount: 99.99, type: "one-time", status: "completed", date: "2024-06-12" },
-  { id: "5", user: "Eve Davis", amount: 299.99, type: "subscription", status: "completed", date: "2024-06-11" },
+  { id: "5", user: "Eve Davis", amount: 259.90, type: "subscription", status: "completed", date: "2024-06-11" },
 ];
 
 const payouts = [

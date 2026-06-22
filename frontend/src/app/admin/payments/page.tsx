@@ -44,11 +44,11 @@ interface Payment {
 }
 
 const mockPayments: Payment[] = [
-  { id: "1", user: "Alice Johnson", email: "alice@example.com", amount: 29.99, plan: "Pro Monthly", status: "succeeded", date: "2024-06-15", invoice: "INV-001" },
-  { id: "2", user: "Bob Smith", email: "bob@example.com", amount: 299.99, plan: "Pro Yearly", status: "succeeded", date: "2024-06-14", invoice: "INV-002" },
-  { id: "3", user: "Carol White", email: "carol@example.com", amount: 29.99, plan: "Pro Monthly", status: "pending", date: "2024-06-13", invoice: "INV-003" },
-  { id: "4", user: "David Brown", email: "david@example.com", amount: 29.99, plan: "Pro Monthly", status: "failed", date: "2024-06-12", invoice: "INV-004" },
-  { id: "5", user: "Eve Davis", email: "eve@example.com", amount: 299.99, plan: "Pro Yearly", status: "refunded", date: "2024-06-11", invoice: "INV-005" },
+  { id: "1", user: "Alice Johnson", email: "alice@example.com", amount: 15.00, plan: "Pro Monthly", status: "succeeded", date: "2024-06-15", invoice: "INV-001" },
+  { id: "2", user: "Bob Smith", email: "bob@example.com", amount: 134.90, plan: "Pro Yearly", status: "succeeded", date: "2024-06-14", invoice: "INV-002" },
+  { id: "3", user: "Carol White", email: "carol@example.com", amount: 29.00, plan: "Ultra Monthly", status: "pending", date: "2024-06-13", invoice: "INV-003" },
+  { id: "4", user: "David Brown", email: "david@example.com", amount: 259.90, plan: "Ultra Yearly", status: "failed", date: "2024-06-12", invoice: "INV-004" },
+  { id: "5", user: "Eve Davis", email: "eve@example.com", amount: 15.00, plan: "Pro Monthly", status: "refunded", date: "2024-06-11", invoice: "INV-005" },
 ];
 
 const statusStyles: Record<PaymentStatus, string> = {
