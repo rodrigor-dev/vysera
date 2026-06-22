@@ -9,10 +9,13 @@ import { progressService } from '../services/video/progress.service';
 import { getAllTemplates, getTemplate, getTemplatesByCategory, applyTemplateToOptions, getTemplateConfig } from '../services/video/template.service';
 import { renderPreview } from '../services/video/renderer.service';
 import { getVideoInfo } from '../utils/ffmpeg';
+import { VideoWorker } from '../workers/video-worker';
 import logger from '../config/logger';
 
 const prisma = new PrismaClient();
 const router = Router();
+const videoWorker = new VideoWorker(2);
+videoWorker.start();
 
 const videoLimiter = createRateLimiter(60 * 1000, 30, 'Too many video API requests');
 
@@ -46,6 +49,8 @@ router.post('/create', async (req: Request, res: Response) => {
       req.user!.userId,
       mergedOptions
     );
+
+    videoWorker.addToQueue(job);
 
     res.status(201).json({ message: 'Processing job created', job });
   } catch (error) {

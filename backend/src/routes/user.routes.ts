@@ -163,6 +163,28 @@ router.get('/projects', validate({ query: paginationSchema }), async (req: Reque
   }
 });
 
+router.post('/projects', async (req: Request, res: Response) => {
+  try {
+    const { title, description, format } = req.body;
+    if (!title) {
+      res.status(400).json({ error: 'Title is required' });
+      return;
+    }
+    const project = await prisma.project.create({
+      data: {
+        userId: req.user!.userId,
+        title,
+        description: description || null,
+        resolution: format || null,
+      },
+    });
+    res.status(201).json({ project });
+  } catch (error) {
+    logger.error('Create project error', { error: (error as Error).message });
+    res.status(500).json({ error: 'Failed to create project' });
+  }
+});
+
 router.get('/exports', validate({ query: paginationSchema }), async (req: Request, res: Response) => {
   try {
     const { page, limit, sortBy, sortOrder } = req.query as unknown as {

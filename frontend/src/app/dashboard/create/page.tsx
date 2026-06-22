@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ type UploadItem = {
   type: string;
   progress: number;
   status: "uploading" | "complete" | "error";
+  file: File;
 };
 
 const formats = [
@@ -121,6 +123,10 @@ export default function CreateVideoPage() {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("Starting...");
   const [isComplete, setIsComplete] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const router = useRouter();
+  const progressRef = useRef(0);
 
   const goNext = () => {
     if (step === 1 && !format) { toast.error("Please select a format"); return; }
@@ -140,6 +146,7 @@ export default function CreateVideoPage() {
       type: file.type,
       progress: 0,
       status: "uploading" as const,
+      file,
     }));
     setUploads((prev) => [...prev, ...items]);
     items.forEach((item) => {
@@ -174,37 +181,142 @@ export default function CreateVideoPage() {
 
   const removeUpload = (id: string) => setUploads((prev) => prev.filter((u) => u.id !== id));
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
     setProgress(0);
-    const statuses = [
-      { at: 0, text: "Analyzing media..." },
-      { at: 15, text: "Applying template..." },
-      { at: 30, text: "Generating captions..." },
-      { at: 50, text: "Color grading and effects..." },
-      { at: 70, text: "Mixing audio..." },
-      { at: 85, text: "Rendering final video..." },
-      { at: 95, text: "Almost done..." },
-    ];
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) { clearInterval(interval); return 100; }
-        const next = Math.min(prev + Math.floor(Math.random() * 10) + 3, 100);
-        const status = [...statuses].reverse().find((s) => next >= s.at);
-        if (status) setStatusText(status.text);
-        return next;
+    setStatusText("Creating project...");
+
+    try {
+      let pid: string;
+      let projectResult: { project: { id: string } };
+
+      // Step 1: Create project
+      const projectRes = await fetch("/api/user/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Video - ${new Date().toLocaleDateString()}`,
+          format,
+        }),
+        credentials: "include",
       });
-    }, 500);
-    setTimeout(() => {
-      clearInterval(interval);
-      setProgress(100);
-      setStatusText("Complete!");
-      setTimeout(() => {
-        setIsGenerating(false);
-        setIsComplete(true);
-        toast.success("Video generated successfully!");
-      }, 800);
-    }, 7000);
+      if (!projectRes.ok) throw new Error("Failed to create project");
+      projectResult = await projectRes.json();
+      pid = projectResult.project.id;
+      setProjectId(pid);
+
+      setStatusText("Uploading media...");
+
+      // Step 2: Upload files associated with the project
+      const uploadIds: string[] = [];
+      for (const item of uploads) {
+        const formData = new FormData();
+        formData.append("file", item.file);
+        const res = await fetch(`/api/upload/video?projectId=${pid}`, {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || "Upload failed");
+        }
+        const body = await res.json();
+        if (body.upload?.id) uploadIds.push(body.upload.id);
+      }
+
+      setStatusText("Starting video processing...");
+
+      // Step 3: Start video processing
+      const options: Record<string, unknown> = {
+        captions,
+        captionStyle,
+        autoZoom,
+        colorGrading,
+        removeSilence,
+        improveAudio,
+        removeNoise,
+        transition,
+        bgMusic,
+        quality,
+      };
+      if (selectedTemplate) options.template = selectedTemplate;
+
+      const createRes = await fetch("/api/video/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: pid,
+          uploadIds,
+          format: format || "horizontal",
+          template: selectedTemplate,
+          options,
+        }),
+        credentials: "include",
+      });
+      if (!createRes.ok) throw new Error("Failed to start processing");
+      const createData = await createRes.json();
+      const jid = createData.job?.id;
+      setJobId(jid);
+      progressRef.current = 0;
+
+      // Step 4: Poll for progress
+      const statusMap: Record<number, string> = {
+        0: "Analyzing media...",
+        15: "Applying template...",
+        30: "Generating captions...",
+        50: "Color grading and effects...",
+        70: "Mixing audio...",
+        85: "Rendering final video...",
+        95: "Almost done...",
+      };
+
+      const poll = async () => {
+        if (!jid) {
+          setProgress(100);
+          setStatusText("Complete!");
+          setIsGenerating(false);
+          setIsComplete(true);
+          return;
+        }
+        try {
+          const pollRes = await fetch(`/api/video/job/${jid}`, { credentials: "include" });
+          if (pollRes.ok) {
+            const data = await pollRes.json();
+            const pct = data.progress?.progress ?? data.job?.progress ?? 0;
+            progressRef.current = Math.max(progressRef.current, pct);
+            setProgress(progressRef.current);
+            const keys = Object.keys(statusMap).map(Number).sort((a, b) => b - a);
+            const match = keys.find((k) => progressRef.current >= k);
+            if (match !== undefined) {
+              const text = statusMap[match];
+              if (text) setStatusText(text);
+            }
+
+            if (data.job?.status === "completed") {
+              setProgress(100);
+              setStatusText("Complete!");
+              setIsGenerating(false);
+              setIsComplete(true);
+              toast.success("Video generated successfully!");
+              return;
+            }
+            if (data.job?.status === "failed") {
+              throw new Error(data.job?.error || "Processing failed");
+            }
+          }
+        } catch {
+          // continue polling
+        }
+        setTimeout(poll, 2000);
+      };
+      poll();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Generation failed";
+      toast.error(message);
+      setIsGenerating(false);
+      setProgress(0);
+    }
   };
 
   const templateCategories = ["All", "Trending", "Popular"];
