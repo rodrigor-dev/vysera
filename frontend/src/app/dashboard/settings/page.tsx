@@ -84,7 +84,7 @@ export default function SettingsPage() {
   const [invoices, setInvoices] = useState<InvoiceInfo[]>([]);
   const [subLoading, setSubLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
-  const role = user?.app_metadata?.role || "user";
+  const role = user?.role || "user";
   const isPro = role === "pro" || role === "admin";
 
   useEffect(() => {

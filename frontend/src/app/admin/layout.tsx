@@ -24,7 +24,7 @@ export default function AdminLayout({
 
   useEffect(() => {
     if (!isLoading && mounted) {
-      const role = user?.app_metadata?.role;
+      const role = user?.role;
       if (role !== "admin") {
         router.replace("/dashboard");
       }
@@ -42,7 +42,7 @@ export default function AdminLayout({
     );
   }
 
-  const role = user?.app_metadata?.role;
+  const role = user?.role;
   if (role !== "admin") {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-[#0a0a0a]">

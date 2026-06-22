@@ -13,7 +13,7 @@ interface PlanBadgeProps {
 
 export function PlanBadge({ className, showUpgrade = false, variant = "badge" }: PlanBadgeProps) {
   const user = useAuthStore((s) => s.user);
-  const role = user?.app_metadata?.role || "user";
+  const role = user?.role || "user";
   const isPro = role === "pro";
   const isAdmin = role === "admin";
 
