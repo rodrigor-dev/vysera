@@ -18,7 +18,7 @@ import {
   Droplets,
   Camera,
   Highlighter,
-  Shadow,
+  Moon,
   Thermometer,
   Fan,
   CircleDot,
@@ -64,7 +64,7 @@ const presets: Preset[] = [
   {
     id: "dark",
     name: "Dark",
-    icon: Shadow,
+    icon: Moon,
     gradient: "from-slate-700/20 to-slate-900/15",
     values: { brightness: -0.3, exposure: -0.3, contrast: 0.2, highlights: -0.3, shadows: -0.2, vignette: 0.3 },
   },
@@ -198,7 +198,7 @@ export function EffectsPanel() {
         <SliderControl label="Saturation" value={colorGrade.saturation} icon={Droplets} onChange={(v) => updateGrade({ saturation: v })} />
         <SliderControl label="Exposure" value={colorGrade.exposure} icon={Camera} onChange={(v) => updateGrade({ exposure: v })} />
         <SliderControl label="Highlights" value={colorGrade.highlights} icon={Highlighter} onChange={(v) => updateGrade({ highlights: v })} />
-        <SliderControl label="Shadows" value={colorGrade.shadows} icon={Shadow} onChange={(v) => updateGrade({ shadows: v })} />
+        <SliderControl label="Shadows" value={colorGrade.shadows} icon={Moon} onChange={(v) => updateGrade({ shadows: v })} />
 
         <div className="grid grid-cols-2 gap-2">
           <SliderControl label="Temperature" value={colorGrade.temperature} icon={Thermometer} onChange={(v) => updateGrade({ temperature: v })} />
