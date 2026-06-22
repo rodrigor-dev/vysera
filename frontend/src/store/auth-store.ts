@@ -106,9 +106,31 @@ export const useAuthStore = create<AuthState>()(
           if (res.ok) {
             const body = await res.json();
             set({ user: body.user ?? null, isLoading: false });
-          } else {
-            set({ user: null, accessToken: null, isLoading: false });
+            return;
           }
+
+          // accessToken expired, try refresh
+          if (res.status === 401) {
+            try {
+              const refreshRes = await fetch("/api/auth/refresh", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                signal: AbortSignal.timeout(15000),
+              });
+              if (refreshRes.ok) {
+                const refreshBody = await refreshRes.json();
+                if (refreshBody.user) {
+                  set({ user: refreshBody.user, accessToken: refreshBody.accessToken ?? null, isLoading: false });
+                  return;
+                }
+              }
+            } catch {
+              // refresh failed
+            }
+          }
+
+          set({ user: null, accessToken: null, isLoading: false });
         } catch {
           set({ user: null, accessToken: null, isLoading: false });
         }
