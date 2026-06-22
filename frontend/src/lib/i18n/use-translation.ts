@@ -6,7 +6,7 @@ const listeners = new Set<() => void>();
 
 function subscribe(callback: () => void) {
   listeners.add(callback);
-  return () => listeners.remove(callback);
+  return () => listeners.delete(callback);
 }
 
 function getSnapshot() {
@@ -26,7 +26,7 @@ export function setLocale(locale: Locale) {
 }
 
 export function useTranslation() {
-  const locale = useSyncExternalStore(subscribe, getSnapshot, () => "en");
+  const locale = useSyncExternalStore(subscribe, getSnapshot, () => "en") as Locale;
 
   const t = useCallback(
     (key: string): string => {

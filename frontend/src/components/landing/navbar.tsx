@@ -83,7 +83,7 @@ export function Navbar() {
         <nav className="hidden items-center gap-1 md:flex">
           {navLinks.map((link, i) => (
             <motion.div
-              key={link.name}
+              key={link.href}
               custom={i}
               variants={linkVariants}
               initial="hidden"
@@ -153,7 +153,7 @@ export function Navbar() {
               <div className="space-y-1 px-3 py-4">
                 {navLinks.map((link, i) => (
                   <motion.div
-                    key={link.name}
+              key={link.key}
                     custom={i}
                     variants={mobileItemVariants}
                     initial="hidden"

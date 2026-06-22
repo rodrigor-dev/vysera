@@ -224,9 +224,9 @@ export function Header() {
               className="ml-1 flex items-center gap-2 rounded-xl px-2 hover:bg-accent/50"
             >
               <Avatar className="h-8 w-8 ring-2 ring-border/50">
-                {user?.user_metadata?.avatar_url ? (
+                {user?.avatarUrl ? (
                   <AvatarImage
-                    src={user.user_metadata.avatar_url}
+                    src={user.avatarUrl}
                     alt="Avatar"
                   />
                 ) : (
@@ -245,7 +245,7 @@ export function Header() {
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">
-                  {user?.user_metadata?.name ?? "User"}
+                  {user?.name ?? "User"}
                 </span>
                 <span className="text-xs font-normal text-muted-foreground/60">
                   {user?.email ?? ""}

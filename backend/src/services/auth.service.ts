@@ -324,17 +324,20 @@ export async function oauthLogin(
       data: { lastLoginAt: new Date() },
     });
 
-    return {
-      user: {
-        id: existingAccount.user.id,
-        email: existingAccount.user.email,
-        name: existingAccount.user.name,
-        role: existingAccount.user.role,
-      },
-      accessToken,
-      refreshToken,
-      expiresAt: sessionExpiry.toISOString(),
-    };
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      proExpiresAt: user.proExpiresAt?.toISOString() ?? null,
+      createdAt: user.createdAt.toISOString(),
+    },
+    accessToken,
+    refreshToken,
+    expiresAt: sessionExpiry.toISOString(),
+  };
   }
 
   let user = email ? await prisma.user.findUnique({ where: { email } }) : null;

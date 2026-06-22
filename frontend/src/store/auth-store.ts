@@ -6,6 +6,7 @@ interface UserProfile {
   email: string;
   name: string | null;
   role: string;
+  avatarUrl: string | null;
   proExpiresAt: string | null;
   createdAt: string;
 }

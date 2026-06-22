@@ -75,7 +75,7 @@ export default function SettingsPage() {
   const { t, locale, changeLocale } = useTranslation();
   const { user, logout } = useAuthStore();
   const { theme, setTheme } = useUIStore();
-  const [name, setName] = useState(user?.user_metadata?.name ?? "");
+  const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
@@ -185,8 +185,8 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16 ring-2 ring-border/50">
-                    {user?.user_metadata?.avatar_url ? (
-                      <AvatarImage src={user.user_metadata.avatar_url} alt="Avatar" />
+                    {user?.avatarUrl ? (
+                      <AvatarImage src={user.avatarUrl} alt="Avatar" />
                     ) : (
                       <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-lg font-semibold">
                         {user?.email?.charAt(0).toUpperCase() ?? "U"}

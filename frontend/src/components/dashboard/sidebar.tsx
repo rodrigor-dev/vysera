@@ -173,8 +173,8 @@ export function Sidebar() {
         )}
       >
         <Avatar className="h-9 w-9 shrink-0 ring-2 ring-border/50">
-          {user?.user_metadata?.avatar_url ? (
-            <AvatarImage src={user.user_metadata.avatar_url} alt="Avatar" />
+          {user?.avatarUrl ? (
+            <AvatarImage src={user.avatarUrl} alt="Avatar" />
           ) : (
             <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-xs font-semibold">
               {user?.email?.charAt(0).toUpperCase() ?? "U"}
@@ -190,7 +190,7 @@ export function Sidebar() {
               className="min-w-0 flex-1"
             >
               <p className="truncate text-sm font-medium text-foreground">
-                {user?.user_metadata?.name ?? user?.email ?? "User"}
+                {user?.name ?? user?.email ?? "User"}
               </p>
               <p className="truncate text-xs text-muted-foreground/60">
                 {user?.email ?? ""}

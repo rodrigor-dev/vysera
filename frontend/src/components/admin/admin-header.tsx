@@ -35,7 +35,7 @@ function getInitials(name: string | null | undefined) {
 
 export function AdminHeader({ title, description }: AdminHeaderProps) {
   const { user, logout } = useAuthStore();
-  const userName = user?.user_metadata?.name || user?.email || "Admin";
+  const userName = user?.name || user?.email || "Admin";
   const userEmail = user?.email || "admin@vysera.com";
 
   return (
@@ -80,7 +80,7 @@ export function AdminHeader({ title, description }: AdminHeaderProps) {
               className="gap-2 rounded-full px-2 hover:bg-primary/5 transition-all duration-300"
             >
               <Avatar className="h-7 w-7 ring-1 ring-border">
-                <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt={userName} />
+                <AvatarImage src={user?.avatarUrl || ""} alt={userName} />
                 <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
                   {getInitials(userName)}
                 </AvatarFallback>

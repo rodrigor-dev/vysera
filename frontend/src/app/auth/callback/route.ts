@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
           getAll() {
             return request.cookies.getAll();
           },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
             cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value),
             );
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     if (!error && data.user) {
       const email = data.user.email;
-      const name = data.user.user_metadata?.name ?? email?.split("@")[0] ?? "";
+      const name = (data.user as any).user_metadata?.name ?? email?.split("@")[0] ?? "";
       const googleId = data.user.identities?.find((i) => i.provider === "google")?.id;
 
       if (email && googleId) {

@@ -79,7 +79,7 @@ export default function DashboardPage() {
   }, []);
 
   const userName =
-    user?.user_metadata?.name ?? user?.email?.split("@")[0] ?? "there";
+    user?.name ?? user?.email?.split("@")[0] ?? "there";
 
   return (
     <motion.div
