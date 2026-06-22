@@ -65,7 +65,7 @@ export default function DashboardPage() {
     const loadProjects = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/projects?limit=5");
+        const response = await fetch("/api/user/projects?limit=5");
         if (!response.ok) throw new Error("Failed to load projects");
         const data = await response.json();
         setProjects(data.data ?? []);

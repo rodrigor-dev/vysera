@@ -49,7 +49,7 @@ export default function LibraryPage() {
         setIsLoading(true);
         const params = new URLSearchParams({ limit: String(perPage * 3) });
         if (activeFilter !== "all") params.set("status", activeFilter);
-        const response = await fetch(`/api/projects?${params}`);
+        const response = await fetch(`/api/user/projects?${params}`);
         if (!response.ok) throw new Error("Failed to load projects");
         const data = await response.json();
         setProjects(data.data ?? []);
