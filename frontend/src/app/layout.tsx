@@ -83,13 +83,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/app-icon.svg", type: "image/svg+xml" }],
   },
-  manifest: "/site.webmanifest",
   applicationName: "Vysera",
-  appleWebApp: {
-    capable: true,
-    title: "Vysera",
-    statusBarStyle: "black-translucent",
-  },
   formatDetection: {
     telephone: false,
   },

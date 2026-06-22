@@ -66,7 +66,7 @@ export function globalErrorHandler(err: Error, _req: Request, res: Response, _ne
   });
 
   res.status(500).json({
-    error: err.message,
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
   });
 }
 
