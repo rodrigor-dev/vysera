@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
 import { useUIStore } from "@/store/ui-store";
+import { useTranslation } from "@/lib/i18n/use-translation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -71,6 +72,7 @@ interface InvoiceInfo {
 }
 
 export default function SettingsPage() {
+  const { t, locale, changeLocale } = useTranslation();
   const { user, logout } = useAuthStore();
   const { theme, setTheme } = useUIStore();
   const [name, setName] = useState(user?.user_metadata?.name ?? "");
@@ -379,17 +381,16 @@ export default function SettingsPage() {
 
                 <div className="flex items-center justify-between rounded-xl border border-border/50 bg-background/50 p-4">
                   <div>
-                    <p className="text-sm font-medium">Language</p>
-                    <p className="text-xs text-muted-foreground/60">Interface language</p>
+                    <p className="text-sm font-medium">{t("settings.language")}</p>
+                    <p className="text-xs text-muted-foreground/60">{t("settings.language.desc")}</p>
                   </div>
-                  <Select defaultValue="en">
+                  <Select value={locale} onValueChange={(v) => changeLocale(v as "en" | "pt")}>
                     <SelectTrigger className="w-32 border-border/50">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="glass-strong border-border/50">
                       <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="es">Spanish</SelectItem>
-                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="pt">Português</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

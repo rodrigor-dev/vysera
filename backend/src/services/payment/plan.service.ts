@@ -66,7 +66,7 @@ export const PLANS: Record<string, PlanConfig> = {
     id: 'pro',
     name: 'Pro',
     role: 'pro',
-    price: { monthly: 1900, annual: 15900 },
+    price: { monthly: 1500, annual: 14999 },
     stripePriceId: process.env.STRIPE_PRO_PRICE_ID,
     features: {
       maxProjects: 999,

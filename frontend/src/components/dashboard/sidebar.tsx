@@ -25,16 +25,17 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { VyseraLogo } from "@/components/shared/vysera-logo";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/create", label: "Create Video", icon: Video },
+  { href: "/dashboard", label: "Dashboard", labelKey: "sidebar.home", icon: LayoutDashboard },
+  { href: "/dashboard/create", label: "Create Video", labelKey: "sidebar.create", icon: Video },
   { href: "/dashboard/edit", label: "Edit Video", icon: Scissors },
-  { href: "/dashboard/library", label: "Library", icon: FolderOpen },
+  { href: "/dashboard/library", label: "Library", labelKey: "sidebar.library", icon: FolderOpen },
   { href: "/dashboard/uploads", label: "Uploads", icon: Upload },
-  { href: "/dashboard/exports", label: "Exports", icon: Download },
-  { href: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/dashboard/exports", label: "Exports", labelKey: "sidebar.exports", icon: Download },
+  { href: "/dashboard/templates", label: "Templates", labelKey: "sidebar.templates", icon: LayoutTemplate },
+  { href: "/dashboard/settings", label: "Settings", labelKey: "sidebar.settings", icon: Settings },
 ];
 
 const sidebarVariants = {
@@ -43,6 +44,7 @@ const sidebarVariants = {
 };
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
   const { user } = useAuthStore();
@@ -93,7 +95,7 @@ export function Sidebar() {
               transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
               className="relative z-10 truncate"
             >
-              {item.label}
+              {item.labelKey ? t(item.labelKey) : item.label}
             </motion.span>
           )}
         </AnimatePresence>

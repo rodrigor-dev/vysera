@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "https://vysera-backend.onrender.com/api"}/:path*`,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -29,7 +37,7 @@ const nextConfig = {
               style-src 'self' 'unsafe-inline';
               img-src 'self' data: blob: https://*.supabase.co https://avatars.githubusercontent.com https://lh3.googleusercontent.com;
               font-src 'self' data:;
-              connect-src 'self' https://*.supabase.co http://localhost:4000 https://api.vysera.com;
+              connect-src 'self' https://*.supabase.co http://localhost:4000 https://vysera-backend.onrender.com;
               frame-src 'self' https://*.supabase.co;
               object-src 'none';
               base-uri 'self';

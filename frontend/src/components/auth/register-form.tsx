@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 import { sanitizeObject } from "@/lib/security/sanitize";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const formVariants = {
   hidden: { opacity: 0 },
@@ -57,30 +58,31 @@ function getPasswordStrength(password: string): {
   if (/\d/.test(password)) score += 15;
   if (/[^a-zA-Z\d]/.test(password)) score += 20;
 
-  if (score < 30) return { score, label: "Weak" };
-  if (score < 60) return { score, label: "Fair" };
-  if (score < 80) return { score, label: "Good" };
-  return { score, label: "Strong" };
+  if (score < 30) return { score, label: "weak" };
+  if (score < 60) return { score, label: "fair" };
+  if (score < 80) return { score, label: "good" };
+  return { score, label: "strong" };
 }
 
 function strengthColor(label: string): string {
   switch (label) {
-    case "Weak": return "bg-destructive";
-    case "Fair": return "bg-orange-500";
-    case "Good": return "bg-yellow-500";
-    case "Strong": return "bg-emerald-500";
+    case "weak": return "bg-destructive";
+    case "fair": return "bg-orange-500";
+    case "good": return "bg-yellow-500";
+    case "strong": return "bg-emerald-500";
     default: return "bg-primary";
   }
 }
 
 const requirements = [
-  { label: "At least 8 characters", test: (pw: string) => pw.length >= 8 },
-  { label: "Uppercase letter", test: (pw: string) => /[A-Z]/.test(pw) },
-  { label: "Lowercase letter", test: (pw: string) => /[a-z]/.test(pw) },
-  { label: "Number", test: (pw: string) => /\d/.test(pw) },
+  { label: "length", test: (pw: string) => pw.length >= 8 },
+  { label: "uppercase", test: (pw: string) => /[A-Z]/.test(pw) },
+  { label: "lowercase", test: (pw: string) => /[a-z]/.test(pw) },
+  { label: "number", test: (pw: string) => /\d/.test(pw) },
 ];
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { register: registerUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -104,7 +106,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const onSubmit = useCallback(
     async (data: RegisterInput) => {
       if (!termsAccepted) {
-        toast.error("Please accept the terms and conditions");
+        toast.error(t("auth.register.error.terms"));
         return;
       }
       setIsSubmitting(true);
@@ -115,12 +117,12 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           sanitized.password as string,
           sanitized.name as string,
         );
-        toast.success("Account created! Check your email to confirm.");
+        toast.success(t("auth.register.success.confirm"));
         onSuccess?.();
         router.push("/dashboard");
         router.refresh();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Registration failed";
+        const message = err instanceof Error ? err.message : t("auth.register.error.generic");
         toast.error(message);
       } finally {
         setIsSubmitting(false);
@@ -140,14 +142,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     >
       <motion.div variants={fieldVariants} className="space-y-2">
         <Label htmlFor="name" className="text-sm font-medium">
-          Full name
+          {t("auth.register.name")}
         </Label>
         <div className="relative">
           <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="name"
             type="text"
-            placeholder="John Doe"
+            placeholder={t("auth.register.placeholder.name")}
             autoComplete="name"
             disabled={isSubmitting}
             className={cn(
@@ -174,14 +176,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <motion.div variants={fieldVariants} className="space-y-2">
         <Label htmlFor="reg-email" className="text-sm font-medium">
-          Email
+          {t("auth.register.email")}
         </Label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="reg-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder={t("auth.register.placeholder.email")}
             autoComplete="email"
             disabled={isSubmitting}
             className={cn(
@@ -208,14 +210,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <motion.div variants={fieldVariants} className="space-y-2">
         <Label htmlFor="reg-password" className="text-sm font-medium">
-          Password
+          {t("auth.register.password")}
         </Label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="reg-password"
             type={showPassword ? "text" : "password"}
-            placeholder="Create a strong password"
+            placeholder={t("auth.register.placeholder.password")}
             autoComplete="new-password"
             disabled={isSubmitting}
             className={cn(
@@ -249,7 +251,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
                 indicatorClassName={strengthColor(strength.label)}
               />
               <span className="text-xs text-muted-foreground min-w-[3rem] text-right">
-                {strength.label}
+                {t("auth.register.password_strength." + strength.label)}
               </span>
             </div>
             <ul className="space-y-1">
@@ -264,7 +266,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
                     )}
                   >
                     {met ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                    {req.label}
+                    {t("auth.register.requirement." + req.label)}
                   </li>
                 );
               })}
@@ -286,14 +288,14 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <motion.div variants={fieldVariants} className="space-y-2">
         <Label htmlFor="confirmPassword" className="text-sm font-medium">
-          Confirm password
+          {t("auth.register.confirm_password")}
         </Label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="confirmPassword"
             type={showConfirm ? "text" : "password"}
-            placeholder="Repeat your password"
+            placeholder={t("auth.register.placeholder.confirm_password")}
             autoComplete="new-password"
             disabled={isSubmitting}
             className={cn(
@@ -338,7 +340,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           htmlFor="terms"
           className="text-sm font-normal text-muted-foreground cursor-pointer select-none leading-5"
         >
-          I agree to the{" "}
+          {t("auth.register.terms.prefix")}{" "}
           <Link
             href="/terms"
             className="text-primary underline-offset-4 hover:underline font-medium"
@@ -346,7 +348,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           >
             Terms of Service
           </Link>{" "}
-          and{" "}
+          {t("auth.register.terms.separator")}{" "}
           <Link
             href="/privacy"
             className="text-primary underline-offset-4 hover:underline font-medium"
@@ -365,7 +367,7 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
           disabled={isSubmitting}
           loading={isSubmitting}
         >
-          {isSubmitting ? "Creating account..." : "Create account"}
+          {isSubmitting ? t("auth.register.loading") : t("auth.register.button")}
         </Button>
       </motion.div>
     </motion.form>

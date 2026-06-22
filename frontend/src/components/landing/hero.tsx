@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -19,9 +20,9 @@ const itemVariants = {
 };
 
 const stats = [
-  { value: "10K+", label: "Creators" },
-  { value: "1M+", label: "Videos Created" },
-  { value: "99.9%", label: "Uptime" },
+  { value: "10K+", labelKey: "hero.stat.creators" },
+  { value: "1M+", labelKey: "hero.stat.videos" },
+  { value: "99.9%", labelKey: "hero.stat.uptime" },
 ];
 
 const floatingShapes = [
@@ -34,6 +35,7 @@ const floatingShapes = [
 ];
 
 export function Hero() {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, 150]);
@@ -89,7 +91,7 @@ export function Hero() {
           <motion.div variants={itemVariants} className="mb-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              AI-Powered Video Creation
+              {t("hero.badge")}
             </span>
           </motion.div>
 
@@ -97,17 +99,16 @@ export function Hero() {
             variants={itemVariants}
             className="max-w-5xl text-center text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl"
           >
-            <span className="gradient-text">Create Viral Videos</span>
+            <span className="gradient-text">{t("hero.title.gradient")}</span>
             <br />
-            <span className="text-foreground">with AI</span>
+            <span className="text-foreground">{t("hero.title.plain")}</span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
             className="mt-6 max-w-2xl text-center text-base text-muted-foreground sm:text-lg md:text-xl"
           >
-            Transform your ideas into stunning AI-powered videos for TikTok, Instagram Reels,
-            YouTube Shorts, and more. No editing skills required.
+            {t("hero.subtitle")}
           </motion.p>
 
           <motion.div
@@ -118,12 +119,12 @@ export function Hero() {
               href="/auth/register"
               className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 hover:scale-105 glow"
             >
-              Start Creating Free
+              {t("hero.cta")}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <button className="group inline-flex items-center gap-2 rounded-xl border border-border bg-background/50 px-8 py-3.5 text-base font-semibold text-foreground backdrop-blur-sm transition-all hover:bg-accent hover:border-primary/30">
               <Play className="h-4 w-4 transition-transform group-hover:scale-110" />
-              Watch Demo
+              {t("hero.cta.secondary")}
             </button>
           </motion.div>
 
@@ -156,7 +157,7 @@ export function Hero() {
                       ))}
                     </div>
                     <span className="text-xs font-medium text-muted-foreground">
-                      Preview
+                      {t("hero.preview")}
                     </span>
                   </div>
                 </div>
@@ -170,7 +171,7 @@ export function Hero() {
           >
             {stats.map((stat) => (
               <motion.div
-                key={stat.label}
+                key={stat.labelKey}
                 variants={itemVariants}
                 className="text-center"
               >
@@ -178,7 +179,7 @@ export function Hero() {
                   {stat.value}
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                  {stat.label}
+                  {t(stat.labelKey)}
                 </div>
               </motion.div>
             ))}

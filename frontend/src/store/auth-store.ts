@@ -1,14 +1,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User, Session } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  proExpiresAt: string | null;
+  createdAt: string;
+}
 
 interface AuthState {
-  user: User | null;
-  session: Session | null;
+  user: UserProfile | null;
+  accessToken: string | null;
   isLoading: boolean;
-  setUser: (user: User | null) => void;
-  setSession: (session: Session | null) => void;
+  setUser: (user: UserProfile | null) => void;
   setLoading: (loading: boolean) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
@@ -18,54 +24,65 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
-      session: null,
+      accessToken: null,
       isLoading: true,
 
       setUser: (user) => set({ user }),
-      setSession: (session) => set({ session }),
       setLoading: (isLoading) => set({ isLoading }),
 
       login: async (email, password) => {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+          credentials: "include",
         });
-        if (error) throw error;
-        set({ user: data.user, session: data.session });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Invalid email or password");
+        set({
+          user: body.user ?? { id: body.userId, email, name: body.name ?? null, role: body.role ?? "user", proExpiresAt: null, createdAt: new Date().toISOString() },
+          accessToken: body.accessToken ?? null,
+          isLoading: false,
+        });
       },
 
       register: async (email, password, name) => {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name } },
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name }),
+          credentials: "include",
         });
-        if (error) throw error;
-        set({ user: data.user, session: data.session });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Registration failed");
+        set({
+          user: body.user ?? null,
+          accessToken: body.accessToken ?? null,
+          isLoading: false,
+        });
       },
 
       logout: async () => {
-        const supabase = createClient();
-        await supabase.auth.signOut();
-        set({ user: null, session: null });
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+        set({ user: null, accessToken: null });
       },
 
       refreshSession: async () => {
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session) {
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          set({ user, session, isLoading: false });
-        } else {
-          set({ user: null, session: null, isLoading: false });
+        try {
+          const res = await fetch("/api/auth/me", { credentials: "include" });
+          if (res.ok) {
+            const body = await res.json();
+            set({ user: body.user ?? null, isLoading: false });
+          } else {
+            set({ user: null, accessToken: null, isLoading: false });
+          }
+        } catch {
+          set({ user: null, accessToken: null, isLoading: false });
         }
       },
     }),
@@ -73,7 +90,7 @@ export const useAuthStore = create<AuthState>()(
       name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
-        session: state.session,
+        accessToken: state.accessToken,
       }),
     },
   ),
@@ -83,11 +100,7 @@ export const useIsAuthenticated = () =>
   useAuthStore((state) => state.user !== null);
 
 export const useIsAdmin = () =>
-  useAuthStore((state) =>
-    state.user?.app_metadata?.role === "admin",
-  );
+  useAuthStore((state) => state.user?.role === "admin");
 
 export const useIsPro = () =>
-  useAuthStore((state) =>
-    state.user?.app_metadata?.plan === "pro",
-  );
+  useAuthStore((state) => state.user?.role === "pro" || state.user?.role === "admin");

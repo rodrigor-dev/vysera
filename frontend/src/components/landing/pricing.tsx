@@ -27,7 +27,7 @@ const plans = [
   {
     name: "Pro",
     description: "For serious creators",
-    price: { monthly: "$19", annual: "$15" },
+    price: { monthly: "R$15", annual: "R$12,50" },
     period: { monthly: "/month", annual: "/month" },
     featured: true,
     features: [

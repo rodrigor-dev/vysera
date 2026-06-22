@@ -7,12 +7,13 @@ import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VyseraLogo } from "@/components/shared/vysera-logo";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const navLinks = [
-  { name: "Features", href: "#features" },
-  { name: "How It Works", href: "#how-it-works" },
-  { name: "Pricing", href: "#pricing" },
-  { name: "Testimonials", href: "#testimonials" },
+  { key: "nav.features", href: "#features" },
+  { key: "nav.how_it_works", href: "#how-it-works" },
+  { key: "nav.pricing", href: "#pricing" },
+  { key: "nav.testimonials", href: "#testimonials" },
 ];
 
 const linkVariants = {
@@ -35,6 +36,7 @@ const mobileItemVariants = {
 };
 
 export function Navbar() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -91,7 +93,7 @@ export function Navbar() {
                 onClick={() => handleNavClick(link.href)}
                 className="group relative px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                {link.name}
+                {t(link.key)}
                 <span className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-gradient-to-r from-purple-500 to-cyan-500 transition-all duration-300 group-hover:w-3/5" />
               </button>
             </motion.div>
@@ -105,7 +107,7 @@ export function Navbar() {
             transition={{ delay: 0.3, duration: 0.4 }}
           >
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth/login">Sign In</Link>
+              <Link href="/auth/login">{t("nav.login")}</Link>
             </Button>
           </motion.div>
           <motion.div
@@ -117,7 +119,7 @@ export function Navbar() {
               href="/auth/register"
               className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30 hover:scale-105 glow"
             >
-              Get Started
+              {t("nav.signup")}
             </Link>
           </motion.div>
         </div>
@@ -163,7 +165,7 @@ export function Navbar() {
                       className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-muted-foreground transition-all hover:bg-primary/5 hover:text-foreground"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-primary/0 transition-all group-hover:bg-primary" />
-                      {link.name}
+                      {t(link.key)}
                     </button>
                   </motion.div>
                 ))}
@@ -178,7 +180,7 @@ export function Navbar() {
                     href="/auth/login"
                     className="flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-foreground"
                   >
-                    Sign In
+                    {t("nav.login")}
                   </Link>
                 </motion.div>
                 <motion.div
@@ -190,7 +192,7 @@ export function Navbar() {
                     href="/auth/register"
                     className="mt-2 flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:shadow-xl hover:shadow-purple-500/30"
                   >
-                    Get Started
+                    {t("nav.signup")}
                   </Link>
                 </motion.div>
               </div>

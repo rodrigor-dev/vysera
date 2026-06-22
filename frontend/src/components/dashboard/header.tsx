@@ -20,6 +20,7 @@ import {
   Command,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/use-translation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -30,19 +31,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const pageTitles: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/dashboard/create": "Create Video",
-  "/dashboard/edit": "Edit Video",
-  "/dashboard/library": "Project Library",
-  "/dashboard/uploads": "Uploads",
-  "/dashboard/exports": "Exports",
-  "/dashboard/templates": "Templates",
-  "/dashboard/settings": "Settings",
-  "/dashboard/upgrade": "Upgrade to Pro",
+type PageTitleEntry = { key: string } | { literal: string };
+
+const pageTitleMap: Record<string, PageTitleEntry> = {
+  "/dashboard": { key: "sidebar.home" },
+  "/dashboard/create": { key: "sidebar.create" },
+  "/dashboard/edit": { literal: "Edit Video" },
+  "/dashboard/library": { key: "sidebar.library_title" },
+  "/dashboard/uploads": { literal: "Uploads" },
+  "/dashboard/exports": { key: "sidebar.exports" },
+  "/dashboard/templates": { key: "sidebar.templates" },
+  "/dashboard/settings": { key: "sidebar.settings" },
+  "/dashboard/upgrade": { key: "sidebar.upgrade_title" },
 };
 
 export function Header() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar, theme, setTheme } = useUIStore();
@@ -53,9 +57,14 @@ export function Header() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [notifications] = useState(3);
 
-  const pageTitle = Object.entries(pageTitles).find(([key]) =>
+  const pageTitleEntry = Object.entries(pageTitleMap).find(([key]) =>
     pathname.startsWith(key),
-  )?.[1] ?? "Dashboard";
+  )?.[1];
+  const pageTitle = pageTitleEntry
+    ? "key" in pageTitleEntry
+      ? t(pageTitleEntry.key)
+      : pageTitleEntry.literal
+    : t("sidebar.home");
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {

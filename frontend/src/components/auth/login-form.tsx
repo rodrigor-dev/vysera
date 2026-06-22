@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { sanitizeObject } from "@/lib/security/sanitize";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 const formVariants = {
   hidden: { opacity: 0 },
@@ -36,6 +37,7 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -58,12 +60,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       try {
         const sanitized = sanitizeObject(data as unknown as Record<string, unknown>);
         await login(sanitized.email as string, sanitized.password as string);
-        toast.success("Welcome back!");
+        toast.success(t("auth.login.success"));
         onSuccess?.();
         router.push("/dashboard");
         router.refresh();
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Invalid email or password";
+        const message = err instanceof Error ? err.message : t("auth.login.error");
         toast.error(message);
       } finally {
         setIsSubmitting(false);
@@ -83,7 +85,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     >
       <motion.div variants={fieldVariants} className="space-y-2">
         <Label htmlFor="email" className="text-sm font-medium">
-          Email
+          {t("auth.login.email")}
         </Label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -118,14 +120,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <motion.div variants={fieldVariants} className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="password" className="text-sm font-medium">
-            Password
+            {t("auth.login.password")}
           </Label>
           <Link
             href="/auth/forgot-password"
             className="text-xs text-muted-foreground underline-offset-4 hover:text-primary hover:underline transition-colors"
             tabIndex={isSubmitting ? -1 : 0}
           >
-            Forgot password?
+            {t("auth.login.forgot")}
           </Link>
         </div>
         <div className="relative">
@@ -178,7 +180,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           htmlFor="rememberMe"
           className="text-sm font-normal text-muted-foreground cursor-pointer select-none"
         >
-          Remember me
+          {t("auth.login.remember")}
         </Label>
       </motion.div>
 
@@ -190,7 +192,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           disabled={isSubmitting}
           loading={isSubmitting}
         >
-          {isSubmitting ? "Signing in..." : "Sign in"}
+          {isSubmitting ? t("auth.login.loading") : t("auth.login.button")}
         </Button>
       </motion.div>
     </motion.form>

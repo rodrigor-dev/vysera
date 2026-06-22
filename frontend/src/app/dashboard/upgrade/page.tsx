@@ -57,7 +57,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: { monthly: "$19", annual: "$15" },
+    price: { monthly: "R$15", annual: "R$12,50" },
     description: "For professional content creators",
     features: [
       "Unlimited projects",
@@ -189,10 +189,9 @@ export default function UpgradePage() {
   };
 
   const annualPrice = (planName: string) => {
-    if (planName === "Free") return "$0";
-    const p = plans.find((pl) => pl.name === planName);
-    if (!p) return "$0";
-    return `$${parseInt(p.price.annual.replace("$", "")) * 12}/yr`;
+    if (planName === "Free") return "Grátis";
+    if (planName === "Pro") return "R$149,99/ano";
+    return "Personalizado";
   };
 
   return (

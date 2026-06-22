@@ -1,9 +1,7 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const protectedRoutes = ["/dashboard", "/admin"];
 const authRoutes = ["/auth/login", "/auth/register", "/auth/forgot-password"];
-const publicRoutes = ["/", "/about", "/pricing", "/contact"];
 
 function isRouteMatch(pathname: string, routes: string[]): boolean {
   return routes.some(
@@ -13,34 +11,9 @@ function isRouteMatch(pathname: string, routes: string[]): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const isAuthenticated = !!user;
+  const accessToken = request.cookies.get("accessToken")?.value;
+  const isAuthenticated = !!accessToken;
   const isProtectedRoute = isRouteMatch(pathname, protectedRoutes);
   const isAuthRoute = isRouteMatch(pathname, authRoutes);
 
@@ -57,7 +30,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
