@@ -209,7 +209,7 @@ export default function ExportsPage() {
             <TableBody>
               {filtered.map((exp) => {
                 const status = statusConfig[exp.status] ?? {
-                  label: exp.status,
+                  label: exp.status ?? "Unknown",
                   dot: "bg-muted-foreground",
                 };
                 return (
@@ -238,9 +238,9 @@ export default function ExportsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground/60">
-                      {formatDistanceToNow(new Date(exp.createdAt), {
-                        addSuffix: true,
-                      })}
+                      {exp.createdAt
+                        ? formatDistanceToNow(new Date(exp.createdAt), { addSuffix: true })
+                        : "Unknown"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

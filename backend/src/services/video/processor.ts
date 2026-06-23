@@ -9,6 +9,7 @@ import { detectScenes, removeSilence, detectBestMoments } from './scene.service'
 import { detectFaces, generateZoomKeyframes, applyAutoZoom } from './face.service';
 import { applyColorGrading, applyTransitions, addTextOverlay } from './effects.service';
 import { renderVideo, getFormatResolution } from './renderer.service';
+import { generateNarration } from './narration.service';
 
 export interface ProcessingOptions {
   inputPaths: string[];
@@ -26,6 +27,7 @@ export interface ProcessingOptions {
   removeNoise: boolean;
   transitionStyle: string;
   quality: 'draft' | 'standard' | 'premium';
+  narration?: { enabled: boolean; voice: string; language: string; text?: string };
 }
 
 export interface ProcessingStage {
@@ -294,6 +296,46 @@ export async function processVideo(
         });
         reportProgress('Mix Audio', 50);
       }
+    }
+
+    if (options.narration?.enabled && options.narration.text) {
+      reportProgress('Mix Audio', 60);
+      try {
+        const narrationAudioPath = path.join(tempDir, `narration_${uuidv4()}.mp3`);
+        await generateNarration(
+          options.narration.text,
+          narrationAudioPath,
+          { voice: options.narration.voice, language: options.narration.language }
+        );
+
+        const narratedOutput = path.join(tempDir, 'narrated_audio.mp4');
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg()
+            .input(audioInput)
+            .input(narrationAudioPath)
+            .complexFilter([
+              `[1:a]volume=1.0[narration]`,
+              `[0:a][narration]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
+            ], ['outa'])
+            .outputOptions('-c:v', 'copy')
+            .outputOptions('-c:a', 'aac', '-b:a', '192k')
+            .outputOptions('-map', '0:v')
+            .outputOptions('-map', '[outa]')
+            .save(narratedOutput)
+            .on('error', (err) => {
+              logger.warn('Narration mixing failed, using original audio', { error: err.message });
+              resolve();
+            })
+            .on('end', () => {
+              audioInput = narratedOutput;
+              resolve();
+            })
+            .run();
+        });
+      } catch (err) {
+        logger.warn('Narration generation failed, continuing without narration', { error: (err as Error).message });
+      }
+      reportProgress('Mix Audio', 80);
     }
 
     if (options.improveAudio) {

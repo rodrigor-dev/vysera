@@ -77,6 +77,9 @@ export default function SettingsPage() {
   const { theme, setTheme } = useUIStore();
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -91,8 +94,8 @@ export default function SettingsPage() {
     if (activeTab !== "billing") return;
     setSubLoading(true);
     Promise.all([
-      fetch("/api/subscriptions/active").then((r) => r.json()),
-      fetch("/api/subscriptions/invoices").then((r) => r.json()),
+      fetch("/api/subscriptions/active", { credentials: "include" }).then((r) => r.json()),
+      fetch("/api/subscriptions/invoices", { credentials: "include" }).then((r) => r.json()),
     ])
       .then(([subData, invData]) => {
         setActiveSub(subData.subscription || null);
@@ -114,16 +117,64 @@ export default function SettingsPage() {
     setPortalLoading(false);
   };
 
-  const handleSaveProfile = () => {
-    toast.success("Profile updated successfully");
+  const handleSaveProfile = async () => {
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to save profile");
+      useAuthStore.getState().setUser({ ...user!, name, email } as any);
+      toast.success("Profile updated successfully");
+    } catch {
+      toast.error("Failed to save profile");
+    }
   };
 
-  const handlePasswordChange = () => {
-    toast.success("Password updated successfully");
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    try {
+      const res = await fetch("/api/user/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to change password");
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast.success("Password updated successfully");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to change password");
+    }
   };
 
-  const handleDeleteAccount = () => {
-    toast.error("Account deletion is not yet implemented");
+  const handleDeleteAccount = async () => {
+    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
+    try {
+      const res = await fetch("/api/user/account", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete account");
+      await logout();
+      window.location.href = "/";
+    } catch {
+      toast.error("Failed to delete account");
+    }
   };
 
   const handleLogout = async () => {
@@ -260,6 +311,8 @@ export default function SettingsPage() {
                     <input
                       id="current-password"
                       type={showPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
                       className="premium-input h-10 w-full px-3 pr-10 text-sm text-foreground"
                     />
                     <button
@@ -277,6 +330,8 @@ export default function SettingsPage() {
                     <input
                       id="new-password"
                       type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                       className="premium-input h-10 w-full px-3 text-sm text-foreground"
                     />
                   </div>
@@ -285,6 +340,8 @@ export default function SettingsPage() {
                     <input
                       id="confirm-password"
                       type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       className="premium-input h-10 w-full px-3 text-sm text-foreground"
                     />
                   </div>
@@ -556,7 +613,7 @@ export default function SettingsPage() {
                         <div>
                           <p className="text-sm font-medium">{inv.description || "Payment"}</p>
                           <p className="text-xs text-muted-foreground/50">
-                            {new Date(inv.createdAt).toLocaleDateString()}
+                            {inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "Unknown date"}
                           </p>
                         </div>
                       </div>
@@ -564,7 +621,7 @@ export default function SettingsPage() {
                         <p className="text-sm font-semibold">
                           {new Intl.NumberFormat("en-US", {
                             style: "currency",
-                            currency: inv.currency.toUpperCase(),
+                            currency: (inv.currency ?? "USD").toUpperCase(),
                           }).format(inv.amount / 100)}
                         </p>
                         <span className="text-[10px] text-emerald-400/70 capitalize">{inv.status}</span>

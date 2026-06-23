@@ -326,13 +326,13 @@ export async function oauthLogin(
 
   return {
     user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      avatarUrl: user.avatarUrl,
-      proExpiresAt: user.proExpiresAt?.toISOString() ?? null,
-      createdAt: user.createdAt.toISOString(),
+      id: existingAccount.user.id,
+      email: existingAccount.user.email,
+      name: existingAccount.user.name,
+      role: existingAccount.user.role,
+      avatarUrl: existingAccount.user.avatarUrl,
+      proExpiresAt: existingAccount.user.proExpiresAt?.toISOString() ?? null,
+      createdAt: existingAccount.user.createdAt.toISOString(),
     },
     accessToken,
     refreshToken,

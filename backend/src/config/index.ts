@@ -66,6 +66,12 @@ export const config = {
     allowedMimeTypes: (process.env.ALLOWED_MIME_TYPES || 'video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp').split(','),
   },
 
+  narration: {
+    provider: process.env.NARRATION_PROVIDER || 'default',
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
+  },
+
   security: {
     sessionExpiryHours: parseInt(process.env.SESSION_EXPIRY_HOURS || '24', 10),
     maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10),

@@ -62,7 +62,7 @@ export function ProjectCard({
   onPlay,
 }: ProjectCardProps) {
   const gradient = gradients[index % gradients.length];
-  const status = statusConfig[project.status];
+  const status = statusConfig[project.status] || statusConfig.draft;
 
   return (
     <motion.div
@@ -142,7 +142,7 @@ export function ProjectCard({
             <div className="flex flex-col items-center gap-1">
               <FileVideo className="h-8 w-8 text-white/20" />
               <span className="text-xs font-medium text-white/30">
-                {project.title.charAt(0).toUpperCase()}
+                {project.title?.charAt(0).toUpperCase() ?? "?"}
               </span>
             </div>
           )}
@@ -161,9 +161,9 @@ export function ProjectCard({
           <div className="flex items-center gap-1 text-xs text-muted-foreground/50">
             <Clock className="h-3 w-3" />
             <span>
-              {formatDistanceToNow(new Date(project.updatedAt), {
-                addSuffix: true,
-              })}
+              {project.updatedAt
+                ? formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })
+                : "Unknown"}
             </span>
           </div>
         </div>

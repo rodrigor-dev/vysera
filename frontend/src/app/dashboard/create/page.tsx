@@ -41,6 +41,7 @@ import {
   Loader2,
   Star,
   Trash2,
+  TrendingUp,
   Clock,
   Play,
   Download,
@@ -86,6 +87,7 @@ const allTemplates = [
   { id: "10", name: "Futurista", desc: "Cyberpunk neon aesthetic with glitch effects", category: "Popular", icon: Globe, ai: false },
   { id: "11", name: "Dark", desc: "Moody dark theme with subtle transitions", category: "Popular", icon: Moon, ai: false },
   { id: "12", name: "Luxo", desc: "Premium luxury brand showcase", category: "Trending", icon: Gem, ai: true },
+  { id: "marketing", name: "Marketing", desc: "Professional branding with CTA and voiceover", category: "Trending", icon: TrendingUp, ai: true },
 ];
 
 const formatSize = (bytes: number) => {
@@ -125,6 +127,8 @@ export default function CreateVideoPage() {
   const [isComplete, setIsComplete] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [narration, setNarration] = useState(true);
+  const [narrationVoice, setNarrationVoice] = useState("pt-BR-Female");
   const router = useRouter();
   const progressRef = useRef(0);
 
@@ -202,6 +206,7 @@ export default function CreateVideoPage() {
       });
       if (!projectRes.ok) throw new Error("Failed to create project");
       projectResult = await projectRes.json();
+      if (!projectResult?.project?.id) throw new Error("Invalid project response");
       pid = projectResult.project.id;
       setProjectId(pid);
 
@@ -241,6 +246,9 @@ export default function CreateVideoPage() {
         quality,
       };
       if (selectedTemplate) options.template = selectedTemplate;
+      if (selectedTemplate === "marketing") {
+        options.narration = { enabled: narration, voice: narrationVoice };
+      }
 
       const createRes = await fetch("/api/video/create", {
         method: "POST",
@@ -633,18 +641,16 @@ export default function CreateVideoPage() {
                       </div>
                       <Switch checked={captions} onCheckedChange={setCaptions} />
                     </div>
-                    {captions && (
-                      <div className="pl-12">
-                        <Select value={captionStyle} onValueChange={setCaptionStyle}>
-                          <SelectTrigger className="premium-input h-9 text-xs border-border/50"><SelectValue /></SelectTrigger>
-                          <SelectContent className="glass-strong border-border/50">
-                            <SelectItem value="tiktok">TikTok Style</SelectItem>
-                            <SelectItem value="shorts">Shorts Style</SelectItem>
-                            <SelectItem value="karaoke">Karaoke Style</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div className={cn("pl-12", !captions && "hidden")}>
+                      <Select value={captionStyle} onValueChange={setCaptionStyle}>
+                        <SelectTrigger className="premium-input h-9 text-xs border-border/50"><SelectValue /></SelectTrigger>
+                        <SelectContent className="glass-strong border-border/50">
+                          <SelectItem value="tiktok">TikTok Style</SelectItem>
+                          <SelectItem value="shorts">Shorts Style</SelectItem>
+                          <SelectItem value="karaoke">Karaoke Style</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="premium-card p-5 flex items-center justify-between">
@@ -687,6 +693,32 @@ export default function CreateVideoPage() {
                     <Switch checked={removeNoise} onCheckedChange={setRemoveNoise} />
                   </div>
                 </div>
+
+                {selectedTemplate === "marketing" && (
+                  <div className="premium-card p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10"><Mic className="h-4 w-4 text-primary" /></div>
+                        <div><p className="text-sm font-medium">AI Narration</p><p className="text-xs text-muted-foreground/60">Generate voiceover automatically</p></div>
+                      </div>
+                      <Switch checked={narration} onCheckedChange={setNarration} />
+                    </div>
+                    {narration && (
+                      <div className="pl-12">
+                        <Select value={narrationVoice} onValueChange={setNarrationVoice}>
+                          <SelectTrigger className="premium-input h-9 text-xs border-border/50"><SelectValue /></SelectTrigger>
+                          <SelectContent className="glass-strong border-border/50">
+                            <SelectItem value="pt-BR-Female">Português (Feminino)</SelectItem>
+                            <SelectItem value="pt-BR-Male">Português (Masculino)</SelectItem>
+                            <SelectItem value="en-US-Female">English (Female)</SelectItem>
+                            <SelectItem value="en-US-Male">English (Male)</SelectItem>
+                            <SelectItem value="es-ES-Female">Español (Femenino)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="premium-card p-5 space-y-2">
@@ -738,7 +770,7 @@ export default function CreateVideoPage() {
                     <h3 className="text-sm font-semibold">Format</h3>
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                        {format && (() => { const Icon = formatIcons[format]; return <Icon className="h-5 w-5 text-primary" />; })()}
+                        {format && (() => { const Icon = formatIcons[format] || MonitorSmartphone; return <Icon className="h-5 w-5 text-primary" />; })()}
                       </div>
                       <div>
                         <p className="text-sm font-medium capitalize">{format}</p>
@@ -776,6 +808,7 @@ export default function CreateVideoPage() {
                       {removeSilence && <Badge variant="secondary" className="bg-muted/50 border-0">Remove Silence</Badge>}
                       {improveAudio && <Badge variant="secondary" className="bg-muted/50 border-0">Improve Audio</Badge>}
                       {removeNoise && <Badge variant="secondary" className="bg-muted/50 border-0">Remove Noise</Badge>}
+                      {selectedTemplate === "marketing" && narration && <Badge variant="secondary" className="bg-muted/50 border-0">Narration ({narrationVoice})</Badge>}
                       <Badge variant="secondary" className="bg-muted/50 border-0 capitalize">Transition: {transition}</Badge>
                       <Badge variant="secondary" className="bg-muted/50 border-0 capitalize">Music: {bgMusic}</Badge>
                       <Badge variant="secondary" className="bg-muted/50 border-0 capitalize">Quality: {quality}</Badge>

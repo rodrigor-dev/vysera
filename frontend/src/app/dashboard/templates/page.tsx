@@ -29,6 +29,7 @@ import {
   Music,
   Zap,
   Palette,
+  Smartphone,
 } from "lucide-react";
 import type { Template } from "@/types";
 
@@ -40,6 +41,12 @@ const categories = [
   "Entertainment",
   "Promotional",
 ];
+
+const iconMap: Record<string, React.ElementType> = {
+  film: Film, zap: Zap, smartphone: Smartphone, instagram: Star,
+  quote: Drama, mic: Mic, music: Music, gamepad: Gamepad2,
+  cpu: Globe, moon: Moon, diamond: Gem, camera: Film, "trending-up": Zap,
+};
 
 const templateGradients = [
   "from-violet-600/30 via-fuchsia-600/20 to-violet-600/10",
@@ -93,6 +100,7 @@ const featuredTemplates = [
   { id: "10", name: "Futurista", desc: "Cyberpunk neon aesthetic with glitch effects", icon: Globe, gradient: "from-orange-600/30 via-rose-600/20 to-orange-600/10" },
   { id: "11", name: "Dark", desc: "Moody dark theme with subtle transitions", icon: Moon, gradient: "from-pink-600/30 via-purple-600/20 to-pink-600/10" },
   { id: "12", name: "Luxo", desc: "Premium luxury brand showcase", icon: Gem, gradient: "from-amber-600/30 via-yellow-600/20 to-amber-600/10" },
+  { id: "13", name: "Marketing", desc: "Professional branding with CTA and voiceover", icon: Zap, gradient: "from-blue-600/30 via-cyan-600/20 to-blue-600/10" },
 ];
 
 export default function TemplatesPage() {
@@ -188,7 +196,7 @@ export default function TemplatesPage() {
           animate="visible"
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
-          {displayTemplates.map((template, index) => {
+          {displayTemplates.filter(Boolean).map((template, index) => {
             const grad = templateGradients[index % templateGradients.length];
             return (
               <motion.div
@@ -213,7 +221,9 @@ export default function TemplatesPage() {
                     </Button>
                   </div>
                   <div className="flex flex-col items-center">
-                    {"icon" in template && template.icon ? (
+                    {"icon" in template && typeof template.icon === "string" ? (
+                      (() => { const Icon = iconMap[template.icon]; return Icon ? <Icon className="h-10 w-10 text-white/20" /> : <LayoutTemplate className="h-10 w-10 text-white/20" />; })()
+                    ) : "icon" in template && typeof template.icon === "function" ? (
                       <template.icon className="h-10 w-10 text-white/20" />
                     ) : (
                       <LayoutTemplate className="h-10 w-10 text-white/20" />

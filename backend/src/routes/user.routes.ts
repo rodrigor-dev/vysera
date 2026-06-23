@@ -1,10 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import path from 'path';
+import fs from 'fs/promises';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema, changePasswordSchema, paginationSchema } from '../utils/validation';
 import { updateUser, getDashboardStats } from '../services/user.service';
 import { hashPassword, verifyPassword } from '../utils/password';
+import { config } from '../config';
 import logger from '../config/logger';
 
 const router = Router();
@@ -233,6 +236,64 @@ router.get('/exports', validate({ query: paginationSchema }), async (req: Reques
   } catch (error) {
     logger.error('Get exports error', { error: (error as Error).message });
     res.status(500).json({ error: 'Failed to fetch exports' });
+  }
+});
+
+router.get('/uploads', async (req: Request, res: Response) => {
+  try {
+    const uploads = await prisma.upload.findMany({
+      where: { userId: req.user!.userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fileName: true,
+        mimeType: true,
+        size: true,
+        projectId: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      uploads: uploads.map((u) => ({
+        id: u.id,
+        fileName: u.fileName,
+        fileType: u.mimeType,
+        fileSize: u.size,
+        status: 'completed',
+        projectId: u.projectId,
+        createdAt: u.createdAt.toISOString(),
+      })),
+    });
+  } catch (error) {
+    logger.error('Get uploads error', { error: (error as Error).message });
+    res.status(500).json({ error: 'Failed to fetch uploads' });
+  }
+});
+
+router.delete('/uploads/:id', async (req: Request, res: Response) => {
+  try {
+    const upload = await prisma.upload.findFirst({
+      where: { id: req.params.id, userId: req.user!.userId },
+    });
+
+    if (!upload) {
+      res.status(404).json({ error: 'Upload not found' });
+      return;
+    }
+
+    const filePath = path.resolve(config.upload.dir, upload.url.replace('/uploads/', ''));
+    try {
+      await fs.unlink(filePath);
+    } catch {
+      // file may not exist on disk
+    }
+
+    await prisma.upload.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Upload deleted' });
+  } catch (error) {
+    logger.error('Delete upload error', { error: (error as Error).message });
+    res.status(500).json({ error: 'Failed to delete upload' });
   }
 });
 

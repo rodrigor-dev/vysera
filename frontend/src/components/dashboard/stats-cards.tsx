@@ -111,6 +111,8 @@ export function StatsCards({
     );
   }
 
+  const items = stats ?? defaultStats;
+
   return (
     <motion.div
       variants={containerVariants}
@@ -118,7 +120,7 @@ export function StatsCards({
       animate="visible"
       className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-4", className)}
     >
-      {stats.map((stat, index) => (
+            {items.map((stat, index) => (
         <motion.div key={stat.label} variants={cardVariants}>
           <div className="premium-card group relative overflow-hidden p-6">
             <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/5 to-transparent blur-2xl transition-all duration-500 group-hover:from-primary/10 group-hover:blur-3xl" />

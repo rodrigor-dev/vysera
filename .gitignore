@@ -4,6 +4,6 @@ dist/
 .env
 .env.local
 *.log
-uploads/
+/uploads/
 .turbo/
 *.tsbuildinfo

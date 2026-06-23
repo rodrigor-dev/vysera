@@ -150,7 +150,7 @@ export function RecentProjects({
           </TableHeader>
           <TableBody>
             {projects.map((project, index) => {
-              const status = statusConfig[project.status];
+              const status = statusConfig[project.status] || statusConfig.draft;
               return (
                 <motion.tr
                   key={project.id}
@@ -174,9 +174,9 @@ export function RecentProjects({
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground/60">
-                    {formatDistanceToNow(new Date(project.updatedAt), {
-                      addSuffix: true,
-                    })}
+                    {project.updatedAt
+                      ? formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })
+                      : "Unknown"}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

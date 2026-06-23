@@ -7,6 +7,7 @@ import { config } from '../../config';
 import logger from '../../config/logger';
 import { progressService } from './progress.service';
 import { getVideoInfo, getAudioInfo } from '../../utils/ffmpeg';
+import { processVideo as advancedProcess } from './processor';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,7 @@ export interface ProcessingOptions {
   crop?: { x: number; y: number; width: number; height: number };
   audio?: { volume?: number; mute?: boolean };
   watermark?: { image: string; position: string };
+  narration?: { enabled: boolean; voice: string; language: string; text?: string };
 }
 
 export interface ProcessingResult {
@@ -86,6 +88,11 @@ class PipelineService {
 
     if (job.status === 'cancelled') return;
 
+    const toExportFormat = (fmt: string): ExportFormat => {
+      const valid: ExportFormat[] = ['mp4', 'mov', 'webm', 'gif'];
+      return valid.includes(fmt as ExportFormat) ? (fmt as ExportFormat) : 'mp4';
+    };
+
     try {
       job.status = 'processing';
       job.stage = 'initializing';
@@ -106,7 +113,7 @@ class PipelineService {
       await fs.mkdir(outputDir, { recursive: true });
 
       const outputFileName = `export_${jobId}_${uuidv4().slice(0, 8)}.${job.options.format || 'mp4'}`;
-      const outputPath = path.join(outputDir, outputFileName);
+      let outputPath = path.join(outputDir, outputFileName);
       const outputUrl = `/uploads/exports/${outputFileName}`;
 
       if (project.uploads.length === 0) {
@@ -117,104 +124,143 @@ class PipelineService {
       job.updatedAt = new Date();
       this.jobs.set(jobId, job);
 
+      const inputPaths = project.uploads.map((u) =>
+        path.resolve(config.upload.dir, u.url.replace('/uploads/', ''))
+      );
       const firstUpload = project.uploads[0]!;
       const inputPath = path.resolve(config.upload.dir, firstUpload.url.replace('/uploads/', ''));
 
-      await this.runFFmpegProcessing(inputPath, outputPath, job);
+      const opts = job.options as any;
+      const hasAdvancedFeatures = opts.template || opts.narration || opts.captions || opts.autoZoom || opts.autoColor || opts.colorGrading || opts.removeSilence || opts.improveAudio || opts.removeNoise || opts.backgroundMusic || opts.transitionStyle || opts.transition || opts.captionStyle;
 
-      const outputStats = await fs.stat(outputPath).catch(() => ({ size: 0 }));
+      let outputStats = await fs.stat(outputPath).catch(() => ({ size: 0 }));
       let duration = 0;
       let width = 0;
       let height = 0;
 
-      try {
-        if (job.options.format === 'mp4' || job.options.format === 'webm' || job.options.format === 'mov') {
-          const info = await getVideoInfo(outputPath);
-          duration = info.duration;
-          width = info.width;
-          height = info.height;
+      if (hasAdvancedFeatures) {
+        const result = await advancedProcess({
+          inputPaths,
+          outputPath,
+          format: opts.format || 'horizontal',
+          template: opts.template || '',
+          addCaptions: opts.captions === true || opts.captions === 'true',
+          captionStyle: opts.captionStyle || 'tiktok',
+          backgroundMusic: opts.backgroundMusic || opts.bgMusic || 'none',
+          musicVolume: opts.musicVolume ?? 0.2,
+          removeSilence: opts.removeSilence === true || opts.removeSilence === 'true',
+          autoZoom: opts.autoZoom === true || opts.autoZoom === 'true',
+          autoColor: opts.autoColor === true || opts.colorGrading === true || opts.autoColor === 'true',
+          improveAudio: opts.improveAudio === true || opts.improveAudio === 'true',
+          removeNoise: opts.removeNoise === true || opts.removeNoise === 'true',
+          transitionStyle: opts.transitionStyle || opts.transition || 'fade',
+          quality: (opts.quality as any) || 'standard',
+          narration: opts.narration && typeof opts.narration === 'object' ? opts.narration : undefined,
+          onProgress: (p, stage) => {
+            job.progress = p;
+            job.stage = stage;
+            this.jobs.set(job.id, job);
+            progressService.updateProgress(job.id, p, stage, job.userId);
+          },
+        });
+        outputPath = result.outputPath;
+        duration = result.duration;
+        width = parseInt(result.resolution?.split('x')[0] || '0', 10);
+        height = parseInt(result.resolution?.split('x')[1] || '0', 10);
+        outputStats = await fs.stat(outputPath).catch(() => ({ size: 0 }));
+      } else {
+        await this.runFFmpegProcessing(inputPath, outputPath, job);
+
+        outputStats = await fs.stat(outputPath).catch(() => ({ size: 0 }));
+        try {
+          if (job.options.format === 'mp4' || job.options.format === 'webm' || job.options.format === 'mov') {
+            const info = await getVideoInfo(outputPath);
+            duration = info.duration;
+            width = info.width;
+            height = info.height;
+          }
+        } catch {
+          logger.warn('Failed to probe output file', { outputPath });
         }
-      } catch {
-        logger.warn('Failed to probe output file', { outputPath });
       }
 
-      const exportRecord = await prisma.export.create({
+    const exportRecord = await prisma.export.create({
+      data: {
+        projectId: job.projectId,
+        userId: job.userId,
+        format: toExportFormat(job.options.format || 'mp4'),
+        resolution: (job.options.resolution as ExportResolution) || undefined,
+        quality: job.options.quality || null,
+        fileUrl: outputUrl,
+        fileSize: outputStats.size,
+        duration: duration || null,
+        status: 'completed',
+        completedAt: new Date(),
+        metadata: job.options as any,
+      },
+    });
+
+    await prisma.project.update({
+      where: { id: job.projectId },
+      data: {
+        status: 'completed',
+        duration: duration || undefined,
+        resolution: job.options.resolution || undefined,
+      },
+    });
+
+    job.status = 'completed';
+    job.progress = 100;
+    job.stage = 'completed';
+    job.result = {
+      outputPath,
+      outputUrl,
+      duration,
+      fileSize: outputStats.size,
+      width,
+      height,
+    };
+    job.updatedAt = new Date();
+    this.jobs.set(jobId, job);
+    progressService.updateProgress(jobId, 100, 'completed', job.userId);
+
+    logger.info('Pipeline job completed', {
+      jobId,
+      projectId: job.projectId,
+      exportId: exportRecord.id,
+      duration,
+      fileSize: outputStats.size,
+    });
+  } catch (error) {
+    const errMsg = (error as Error).message;
+    logger.error('Pipeline job failed', { jobId, error: errMsg });
+
+    job.status = 'failed';
+    job.error = errMsg;
+    job.stage = 'failed';
+    job.updatedAt = new Date();
+    this.jobs.set(jobId, job);
+    progressService.updateProgress(jobId, 0, `failed: ${errMsg}`, job.userId);
+
+    await prisma.project
+      .update({
+        where: { id: job.projectId },
+        data: { status: 'failed' },
+      })
+      .catch((e) => logger.error('Failed to update project status', { error: (e as Error).message }));
+
+    await prisma.export
+      .create({
         data: {
           projectId: job.projectId,
           userId: job.userId,
-          format: (job.options.format as ExportFormat) || 'mp4',
-          resolution: (job.options.resolution as ExportResolution) || undefined,
-          quality: job.options.quality || null,
-          fileUrl: outputUrl,
-          fileSize: outputStats.size,
-          duration: duration || null,
-          status: 'completed',
-          completedAt: new Date(),
-          metadata: job.options as any,
+          format: toExportFormat(job.options.format || 'mp4'),
+          status: 'failed',
+          error: errMsg,
         },
-      });
-
-      await prisma.project.update({
-        where: { id: job.projectId },
-        data: {
-          status: 'completed',
-          duration: duration || undefined,
-          resolution: job.options.resolution || undefined,
-        },
-      });
-
-      job.status = 'completed';
-      job.progress = 100;
-      job.stage = 'completed';
-      job.result = {
-        outputPath,
-        outputUrl,
-        duration,
-        fileSize: outputStats.size,
-        width,
-        height,
-      };
-      job.updatedAt = new Date();
-      this.jobs.set(jobId, job);
-      progressService.updateProgress(jobId, 100, 'completed', job.userId);
-
-      logger.info('Pipeline job completed', {
-        jobId,
-        projectId: job.projectId,
-        exportId: exportRecord.id,
-        duration,
-        fileSize: outputStats.size,
-      });
-    } catch (error) {
-      const errMsg = (error as Error).message;
-      logger.error('Pipeline job failed', { jobId, error: errMsg });
-
-      job.status = 'failed';
-      job.error = errMsg;
-      job.stage = 'failed';
-      job.updatedAt = new Date();
-      this.jobs.set(jobId, job);
-      progressService.updateProgress(jobId, 0, `failed: ${errMsg}`, job.userId);
-
-      await prisma.project
-        .update({
-          where: { id: job.projectId },
-          data: { status: 'failed' },
-        })
-        .catch((e) => logger.error('Failed to update project status', { error: (e as Error).message }));
-
-      await prisma.export
-        .create({
-          data: {
-            projectId: job.projectId,
-            userId: job.userId,
-            format: (job.options.format as ExportFormat) || 'mp4',
-            status: 'failed',
-            error: errMsg,
-          },
-        })
-        .catch((e) => logger.error('Failed to create failed export record', { error: (e as Error).message }));
-    }
+      })
+      .catch((e) => logger.error('Failed to create failed export record', { error: (e as Error).message }));
+  }
   }
 
   private runFFmpegProcessing(

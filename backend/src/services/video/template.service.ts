@@ -438,6 +438,43 @@ const TEMPLATES: VideoTemplate[] = [
       fps: 24,
     },
   },
+  {
+    id: 'marketing',
+    name: 'Marketing',
+    description: 'Professional marketing video with branded lower thirds, product showcase transitions, CTA overlays, and voiceover support. Ideal for ads, product launches, and promotional content.',
+    category: 'professional',
+    icon: 'trending-up',
+    defaultFormat: 'horizontal',
+    colorGrading: 'clean',
+    transitions: 'smooth',
+    captionStyle: 'brand',
+    backgroundMusic: 'corporate',
+    duration: { min: 10, max: 300, default: 60 },
+    effects: [
+      { type: 'logo_overlay', position: 'top-left', size: 0.12, opacity: 0.8 },
+      { type: 'brand_lower_third', style: 'modern', animation: 'slide-up' },
+      { type: 'product_highlight', zoom: 1.2, glow: true },
+      { type: 'cta_overlay', style: 'button', animation: 'pulse' },
+      { type: 'color_grade', preset: 'clean' },
+    ],
+    aiSettings: {
+      autoColor: true,
+      autoZoom: true,
+      removeSilence: true,
+      improveAudio: true,
+      narration: true,
+      captionStyle: 'brand',
+      musicVolume: 0.2,
+    },
+    config: {
+      outputCodec: 'libx264',
+      crf: 18,
+      preset: 'medium',
+      audioBitrate: '320k',
+      resolution: '1920x1080',
+      fps: 30,
+    },
+  },
 ];
 
 export function getTemplate(templateId: string): VideoTemplate | undefined {
@@ -466,6 +503,7 @@ export function applyTemplateToOptions(templateId: string, userOptions: Record<s
     backgroundMusic: userOptions.backgroundMusic || template.backgroundMusic,
     duration: userOptions.duration || template.duration.default,
     ...template.aiSettings,
+    narration: userOptions.narration || { enabled: true, voice: 'pt-BR-Female', language: 'pt-BR' },
   };
 }
 

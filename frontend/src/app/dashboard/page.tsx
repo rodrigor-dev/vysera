@@ -7,7 +7,10 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentProjects } from "@/components/dashboard/recent-projects";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Video, Upload, LayoutTemplate, Sparkles, ArrowRight } from "lucide-react";
+import {
+  Video, Upload, LayoutTemplate, Sparkles, ArrowRight,
+  FolderKanban, CheckCircle2,
+} from "lucide-react";
 import Link from "next/link";
 import type { Project } from "@/types";
 
@@ -60,22 +63,39 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [stats, setStats] = useState<{ label: string; value: string; icon: React.ReactNode; trend: number; trendLabel: string }[] | null>(null);
 
   useEffect(() => {
-    const loadProjects = async () => {
+    const loadData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("/api/user/projects?limit=5");
-        if (!response.ok) throw new Error("Failed to load projects");
-        const data = await response.json();
-        setProjects(data.data ?? []);
+        const [projRes, statsRes] = await Promise.all([
+          fetch("/api/user/projects?limit=5", { credentials: "include" }),
+          fetch("/api/user/dashboard", { credentials: "include" }),
+        ]);
+        if (projRes.ok) {
+          const data = await projRes.json();
+          setProjects(data.data ?? []);
+        }
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          const s = data.stats;
+          if (s) {
+            setStats([
+              { label: "Total Projects", value: String(s.totalProjects ?? 0), icon: <FolderKanban className="h-5 w-5" />, trend: 0, trendLabel: "all time" },
+              { label: "Completed", value: String(s.completedProjects ?? 0), icon: <CheckCircle2 className="h-5 w-5" />, trend: 0, trendLabel: "finished exports" },
+              { label: "Templates", value: String(s.totalTemplates ?? 0), icon: <LayoutTemplate className="h-5 w-5" />, trend: 0, trendLabel: "saved templates" },
+              { label: "Uploads", value: String(s.totalUploads ?? 0), icon: <Upload className="h-5 w-5" />, trend: 0, trendLabel: "files uploaded" },
+            ]);
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"));
       } finally {
         setIsLoading(false);
       }
     };
-    loadProjects();
+    loadData();
   }, []);
 
   const userName =
