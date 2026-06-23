@@ -4,6 +4,16 @@ import path from 'path';
 import { execFile } from 'child_process';
 import logger from '../config/logger';
 
+let FFMPEG_STATIC_PATH: string | null = null;
+
+try {
+  FFMPEG_STATIC_PATH = require('ffmpeg-static');
+  if (FFMPEG_STATIC_PATH) {
+    ffmpeg.setFfmpegPath(FFMPEG_STATIC_PATH);
+    ffmpeg.setFfprobePath(FFMPEG_STATIC_PATH);
+  }
+} catch { /* ffmpeg-static not available, rely on system PATH */ }
+
 export interface VideoInfo {
   duration: number;
   width: number;
@@ -39,16 +49,88 @@ function parseFps(fpsStr?: string | number): number {
 
 export function probeFile(filePath: string): Promise<FFProbeData> {
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, data) => {
-      if (err) {
-        logger.error('FFprobe error', { filePath, error: err.message });
-        reject(new Error(`Failed to probe file: ${err.message}`));
-        return;
+    const ffmpegPath = FFMPEG_STATIC_PATH || 'ffmpeg';
+    const proc = execFile(ffmpegPath, [
+      '-i', filePath,
+      '-f', 'null',
+      '-',
+    ], { timeout: 30000 }, (err, _stdout, stderr) => {
+      // ffmpeg always exits with code 1 when using -i without -y, that's expected
+      const output = stderr || '';
+
+      const streams: ffmpeg.FfprobeStream[] = [];
+      const format = {
+        filename: filePath,
+        nb_streams: 0,
+        format_name: 'unknown',
+        format_long_name: 'unknown',
+        start_time: 0,
+        duration: 0,
+        size: 0,
+        bit_rate: 0,
+        probe_score: 0,
+      } as ffmpeg.FfprobeFormat;
+
+      const durMatch = output.match(/Duration:\s*(\d+):(\d+):(\d+\.\d+)/);
+      if (durMatch) {
+        const h = parseInt(durMatch[1]!, 10);
+        const m = parseInt(durMatch[2]!, 10);
+        const s = parseFloat(durMatch[3]!);
+        format.duration = h * 3600 + m * 60 + s;
       }
-      resolve({
-        streams: data.streams,
-        format: data.format,
-      });
+
+      const brMatch = output.match(/bitrate:\s*(\d+)\s*kb\/s/);
+      if (brMatch) {
+        format.bit_rate = parseInt(brMatch[1]!, 10) * 1000;
+      }
+
+      // Parse streams
+      const streamBlocks = output.split(/Stream #0:/g).slice(1);
+      for (const block of streamBlocks) {
+        const isVideo = block.includes(': Video:');
+        const isAudio = block.includes(': Audio:');
+        if (isVideo) {
+          const wMatch = block.match(/, (\d{3,5})x(\d{3,5})\s/);
+          const fpsMatch = block.match(/([\d.]+)\s*(?:fps|tbr)/);
+          const codecMatch = block.match(/Video:\s*(\S+)/);
+          streams.push({
+            index: streams.length,
+            codec_type: 'video',
+            codec_name: codecMatch?.[1] || 'unknown',
+            width: wMatch ? parseInt(wMatch[1]!, 10) : undefined,
+            height: wMatch ? parseInt(wMatch[2]!, 10) : undefined,
+            r_frame_rate: fpsMatch ? `${fpsMatch[1]}/1` : undefined,
+            codec_tag: '0x0000',
+            codec_tag_string: 'unknown',
+            id: '0x0',
+            start_time: '0',
+            duration: format.duration,
+          } as any);
+        } else if (isAudio) {
+          const codecMatch = block.match(/Audio:\s*(\S+)/);
+          const srMatch = block.match(/(\d+)\s*Hz/);
+          const chMatch = block.match(/(\d+)\s*channels?/);
+          streams.push({
+            index: streams.length,
+            codec_type: 'audio',
+            codec_name: codecMatch?.[1] || 'unknown',
+            sample_rate: srMatch ? parseInt(srMatch[1]!, 10) : undefined,
+            channels: chMatch ? parseInt(chMatch[1]!, 10) : undefined,
+            codec_tag: '0x0000',
+            codec_tag_string: 'unknown',
+            id: '0x0',
+            start_time: '0',
+            duration: format.duration,
+          } as any);
+        }
+      }
+
+      format.nb_streams = streams.length;
+      resolve({ streams, format });
+    });
+
+    proc.on('error', (err) => {
+      reject(new Error(`Failed to probe file: ${err.message}`));
     });
   });
 }
@@ -116,18 +198,13 @@ export async function getVideoDuration(filePath: string): Promise<number> {
 export async function ensureFFmpeg(): Promise<boolean> {
   try {
     await new Promise<void>((resolve, reject) => {
-      execFile('ffmpeg', ['-version'], { timeout: 10000 }, (err) => {
-        if (err) reject(err); else resolve();
-      });
-    });
-    await new Promise<void>((resolve, reject) => {
-      execFile('ffprobe', ['-version'], { timeout: 10000 }, (err) => {
+      execFile(FFMPEG_STATIC_PATH || 'ffmpeg', ['-version'], { timeout: 10000 }, (err) => {
         if (err) reject(err); else resolve();
       });
     });
     return true;
   } catch {
-    logger.error('FFmpeg or ffprobe not found in PATH');
+    logger.error('FFmpeg not found');
     return false;
   }
 }
@@ -149,7 +226,7 @@ export async function ensureTempDir(dirPath: string): Promise<string> {
 export function getHardwareAcceleration(): string | null {
   try {
     const { execFileSync } = require('child_process');
-    const output = execFileSync('ffmpeg', ['-encoders'], { timeout: 10000, encoding: 'utf8' });
+    const output = execFileSync(FFMPEG_STATIC_PATH || 'ffmpeg', ['-encoders'], { timeout: 10000, encoding: 'utf8' });
     if (output.includes('h264_nvenc')) return 'h264_nvenc';
     if (output.includes('h264_amf')) return 'h264_amf';
     if (output.includes('h264_videotoolbox')) return 'h264_videotoolbox';

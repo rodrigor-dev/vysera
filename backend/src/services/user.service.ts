@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma, UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { createAuditLog } from './audit.service';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 const userSelect = {
   id: true,

@@ -1,8 +1,7 @@
-import { PrismaClient, SubscriptionProvider, SubscriptionStatus } from '@prisma/client';
+import { SubscriptionProvider, SubscriptionStatus } from '@prisma/client';
 import { PLANS, getUserPlan } from './plan.service';
 import logger from '@/config/logger';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function createSubscription(
   userId: string,

@@ -1,7 +1,6 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import logger from '../config/logger';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 interface CreateAuditLogParams {
   userId?: string | null;

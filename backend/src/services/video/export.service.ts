@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
@@ -15,8 +15,6 @@ import {
   calculateOptimalBitrate,
   generateOutputFilename,
 } from './platform-optimizer.service';
-
-const prisma = new PrismaClient();
 
 interface ExportOptions {
   projectId: string;

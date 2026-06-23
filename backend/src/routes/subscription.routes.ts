@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { authenticate } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/security';
 import {
@@ -10,7 +10,6 @@ import {
 import { getUserPlan, PLANS } from '../services/payment/plan.service';
 import logger from '../config/logger';
 
-const prisma = new PrismaClient();
 const router = Router();
 const subscriptionLimiter = createRateLimiter(60 * 1000, 30, 'Too many subscription requests');
 

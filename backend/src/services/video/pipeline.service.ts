@@ -1,4 +1,4 @@
-import { PrismaClient, ExportFormat, ExportResolution } from '@prisma/client';
+import { ExportFormat, ExportResolution } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
@@ -8,8 +8,7 @@ import logger from '../../config/logger';
 import { progressService } from './progress.service';
 import { getVideoInfo, getAudioInfo } from '../../utils/ffmpeg';
 import { processVideo as advancedProcess } from './processor';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export interface ProcessingOptions {
   format: string;
@@ -114,7 +113,7 @@ class PipelineService {
 
       const outputFileName = `export_${jobId}_${uuidv4().slice(0, 8)}.${job.options.format || 'mp4'}`;
       let outputPath = path.join(outputDir, outputFileName);
-      const outputUrl = `/uploads/exports/${outputFileName}`;
+      let outputUrl = `/uploads/exports/${outputFileName}`;
 
       if (project.uploads.length === 0) {
         throw new Error('No uploads to process');
@@ -164,6 +163,7 @@ class PipelineService {
           },
         });
         outputPath = result.outputPath;
+        outputUrl = result.outputUrl || outputUrl;
         duration = result.duration;
         width = parseInt(result.resolution?.split('x')[0] || '0', 10);
         height = parseInt(result.resolution?.split('x')[1] || '0', 10);

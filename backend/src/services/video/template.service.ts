@@ -494,16 +494,16 @@ export function applyTemplateToOptions(templateId: string, userOptions: Record<s
   if (!template) return userOptions;
 
   return {
+    ...template.aiSettings,
     ...userOptions,
     format: userOptions.format || template.defaultFormat,
     template: templateId,
-    colorGrading: userOptions.colorGrading || template.colorGrading,
-    transitions: userOptions.transitions || template.transitions,
-    captionStyle: userOptions.captionStyle || template.captionStyle,
-    backgroundMusic: userOptions.backgroundMusic || template.backgroundMusic,
-    duration: userOptions.duration || template.duration.default,
-    ...template.aiSettings,
-    narration: userOptions.narration || { enabled: true, voice: 'pt-BR-Female', language: 'pt-BR' },
+    colorGrading: userOptions.colorGrading ?? template.colorGrading,
+    transitions: userOptions.transitions ?? template.transitions,
+    captionStyle: userOptions.captionStyle ?? template.captionStyle,
+    backgroundMusic: userOptions.backgroundMusic ?? template.backgroundMusic,
+    duration: userOptions.duration ?? template.duration.default,
+    narration: userOptions.narration ?? { enabled: false, voice: 'pt-BR-Female', language: 'pt-BR' },
   };
 }
 

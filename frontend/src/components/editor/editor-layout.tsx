@@ -8,6 +8,7 @@ import { PreviewPanel } from "@/components/editor/preview-panel";
 import { ToolPanel } from "@/components/editor/tool-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Timeline } from "./timeline/timeline";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -125,12 +126,8 @@ export function EditorLayout() {
                 </Button>
               </div>
             </div>
-            <div className="glass-strong flex flex-1 items-center justify-center rounded-2xl">
-              <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
-                <Film className="h-8 w-8" />
-                <span className="text-xs font-medium">Timeline</span>
-                <span className="text-[10px]">Import components/editor/timeline here</span>
-              </div>
+            <div className="flex flex-1 overflow-hidden rounded-2xl">
+              <Timeline />
             </div>
           </div>
         </div>

@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import logger from '@/config/logger';
 import { createSubscription, updateSubscription, createInvoice, syncUserRole } from './subscription.service';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || '';

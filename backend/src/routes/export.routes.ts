@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs';
 import { authenticate } from '../middleware/auth';
@@ -10,7 +10,6 @@ import { getPlatformConfig, getAllPlatforms, RESOLUTION_CONFIGS, FORMAT_CONFIGS,
 import { renderQueueService } from '../services/video/render-queue.service';
 import logger from '../config/logger';
 
-const prisma = new PrismaClient();
 const router = Router();
 const exportLimiter = createRateLimiter(60 * 1000, 10, 'Too many export requests');
 

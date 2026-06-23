@@ -26,15 +26,18 @@ export async function detectScenes(videoPath: string): Promise<Scene[]> {
   let lastTimestamp = 0;
   let sceneIndex = 0;
 
+  const nullOutput = path.join(path.dirname(videoPath), `_null_${uuidv4()}.mp4`);
+
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
-      .videoFilter("select='gt(scene\\\\,0.4)',showinfo")
-      .outputOptions('-f', 'null')
+      .videoFilter("select='gt(scene,0.4)',showinfo")
+      .outputOptions(['-an', '-sn', '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '51'])
       .on('error', (err) => {
         logger.error('Scene detection error', { error: err.message });
         reject(new Error(`Scene detection failed: ${err.message}`));
       })
-      .on('end', () => {
+      .on('end', async () => {
+        try { await fs.unlink(nullOutput); } catch { }
         scenes.push({
           index: sceneIndex++,
           start: lastTimestamp,
@@ -60,7 +63,7 @@ export async function detectScenes(videoPath: string): Promise<Scene[]> {
           }
         }
       })
-      .output('/dev/null')
+      .output(nullOutput)
       .run();
   });
 }
@@ -85,14 +88,16 @@ export async function removeSilence(
     ffmpeg(inputPath)
       .audioCodec('pcm_s16le')
       .outputOptions('-vn')
-      .save(tempAudio)
+      .output(tempAudio)
       .on('error', (err) => reject(err))
       .on('end', () => {
         let currentSilence: { start: number; end: number } | null = null;
 
+        const silenceOutput = path.join(path.dirname(outputPath), `_silence_${uuidv4()}.wav`);
         ffmpeg(tempAudio)
           .audioFilter(`silencedetect=noise=${noiseDb}:d=${durSec}`)
-          .outputOptions('-f', 'null')
+          .audioCodec('pcm_s16le')
+          .output(silenceOutput)
           .on('stderr', (line) => {
             const silenceStart = line.match(/silence_start: ([\d.]+)/);
             const silenceEnd = line.match(/silence_end: ([\d.]+)/);
@@ -111,22 +116,15 @@ export async function removeSilence(
           })
           .on('error', (err) => reject(err))
           .on('end', async () => {
-            try {
-              await fs.unlink(tempAudio).catch(() => {});
-            } catch {
-              // ignore cleanup errors
-            }
-
             if (segments.length === 0) {
-              await fs.copyFile(inputPath, outputPath);
-              resolve();
-              return;
+              await fs.copyFile(inputPath, outputPath).catch(() => {});
+            } else {
+              await concatNonSilentSegments(inputPath, outputPath, segments);
             }
-
-            await concatNonSilentSegments(inputPath, outputPath, segments);
+            await fs.unlink(tempAudio).catch(() => {});
+            await fs.unlink(silenceOutput).catch(() => {});
             resolve();
           })
-          .output('/dev/null')
           .run();
       })
       .run();
@@ -176,8 +174,7 @@ async function concatNonSilentSegments(
       .outputOptions('-c:a', 'aac', '-b:a', '128k')
       .save(outputPath)
       .on('error', (err) => reject(new Error(`Silence removal concat failed: ${err.message}`)))
-      .on('end', () => resolve())
-      .run();
+      .on('end', () => resolve());
   });
 }
 
@@ -249,8 +246,7 @@ export async function splitAtMoments(
         .on('end', () => {
           outputFiles.push(outputPath);
           resolve();
-        })
-        .run();
+        });
     });
   }
 

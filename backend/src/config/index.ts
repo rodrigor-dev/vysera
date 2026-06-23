@@ -67,7 +67,7 @@ export const config = {
   },
 
   narration: {
-    provider: process.env.NARRATION_PROVIDER || 'default',
+    provider: process.env.NARRATION_PROVIDER || 'edge',
     openaiApiKey: process.env.OPENAI_API_KEY,
     elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
   },

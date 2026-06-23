@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuid } from 'uuid';
+import { EdgeTTS } from 'node-edge-tts';
 import logger from '@/config/logger';
 import { config } from '../../config';
 
@@ -30,8 +30,10 @@ export async function generateNarration(
       return generateOpenAITTSUnderlay(text, outputPath, options);
     case 'elevenlabs':
       return generateElevenLabsTTS(text, outputPath, options);
+    case 'edge':
+      return generateEdgeTTS(text, outputPath, options);
     default:
-      return generatePlaceholderNarration(text, outputPath, options);
+      return generateEdgeTTS(text, outputPath, options);
   }
 }
 
@@ -42,8 +44,7 @@ async function generateOpenAITTSUnderlay(
 ): Promise<string> {
   const apiKey = config.narration?.openaiApiKey || process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    logger.warn('OpenAI API key not configured, falling back to placeholder narration');
-    return generatePlaceholderNarration(text, outputPath, options);
+    throw new Error('OpenAI TTS requires OPENAI_API_KEY environment variable');
   }
 
   const voiceMap: Record<string, string> = {
@@ -87,8 +88,7 @@ async function generateElevenLabsTTS(
 ): Promise<string> {
   const apiKey = config.narration?.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
-    logger.warn('ElevenLabs API key not configured, falling back to placeholder narration');
-    return generatePlaceholderNarration(text, outputPath, options);
+    throw new Error('ElevenLabs TTS requires ELEVENLABS_API_KEY environment variable');
   }
 
   const voiceMap: Record<string, string> = {
@@ -127,57 +127,31 @@ async function generateElevenLabsTTS(
   return outputPath;
 }
 
-async function generatePlaceholderNarration(
+async function generateEdgeTTS(
   text: string,
   outputPath: string,
   options: NarrationOptions
 ): Promise<string> {
-  logger.warn('No TTS provider configured, generating silent placeholder narration');
-  const sampleRate = 22050;
-  const duration = Math.max(1, Math.ceil(text.length / 15));
-  const numSamples = sampleRate * duration;
-  const buffer = Buffer.alloc(44 + numSamples * 2);
+  const voiceMap: Record<string, string> = {
+    'pt-BR-Female': 'pt-BR-FranciscaNeural',
+    'pt-BR-Male': 'pt-BR-AntonioNeural',
+    'en-US-Female': 'en-US-AriaNeural',
+    'en-US-Male': 'en-US-GuyNeural',
+  };
 
-  buffer.write('RIFF', 0);
-  buffer.writeUInt32LE(36 + numSamples * 2, 4);
-  buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12);
-  buffer.writeUInt32LE(16, 16);
-  buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22);
-  buffer.writeUInt32LE(sampleRate, 24);
-  buffer.writeUInt32LE(sampleRate * 2, 28);
-  buffer.writeUInt16LE(2, 32);
-  buffer.writeUInt16LE(16, 34);
-  buffer.write('data', 36);
-  buffer.writeUInt32LE(numSamples * 2, 40);
+  const edgeVoice = voiceMap[options.voice] || 'en-US-AriaNeural';
+  const lang = options.language || 'en-US';
+  const rate = options.speed ? `${Math.round((options.speed - 1) * 100)}%` : '0%';
 
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const freq = 220 + (Math.sin(t * 0.5) * 100);
-    const amplitude = 8000 * (1 - Math.min(1, t / 0.05));
-    const sample = Math.round(amplitude * Math.sin(2 * Math.PI * freq * t));
-    buffer.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + i * 2);
-  }
-
-  const wavPath = outputPath.replace(/\.mp3$/, '.wav');
-  fs.writeFileSync(wavPath, buffer);
-
-  const ffmpeg = require('fluent-ffmpeg');
-  return new Promise((resolve, reject) => {
-    ffmpeg(wavPath)
-      .audioCodec('libmp3lame')
-      .audioBitrate('64k')
-      .output(outputPath)
-      .on('end', () => {
-        try { fs.unlinkSync(wavPath); } catch { }
-        logger.info(`Placeholder narration generated: ${outputPath}`);
-        resolve(outputPath);
-      })
-      .on('error', (err) => {
-        try { fs.unlinkSync(wavPath); } catch { }
-        reject(err);
-      })
-      .run();
+  const tts = new EdgeTTS({
+    voice: edgeVoice,
+    lang,
+    outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
+    rate,
+    pitch: options.pitch ? `${options.pitch}Hz` : '0Hz',
   });
+
+  await tts.ttsPromise(text, outputPath);
+  logger.info(`Edge TTS narration generated: ${outputPath}`);
+  return outputPath;
 }

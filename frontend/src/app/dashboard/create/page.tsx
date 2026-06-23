@@ -64,7 +64,7 @@ type UploadItem = {
   size: number;
   type: string;
   progress: number;
-  status: "uploading" | "complete" | "error";
+  status: "pending" | "uploading" | "complete" | "error";
   file: File;
 };
 
@@ -75,18 +75,18 @@ const formats = [
 ];
 
 const allTemplates = [
-  { id: "1", name: "Cinema", desc: "Epic cinematic intro with dramatic transitions", category: "Trending", icon: Clapperboard, ai: true },
-  { id: "2", name: "Vlog", desc: "Casual storytelling for daily content", category: "Popular", icon: Film, ai: false },
-  { id: "3", name: "Viral", desc: "High-energy clips for maximum engagement", category: "Trending", icon: Sparkles, ai: true },
-  { id: "4", name: "Shorts", desc: "Vertical short-form content optimized", category: "Popular", icon: Scissors, ai: true },
-  { id: "5", name: "Reels", desc: "Instagram Reels with trending effects", category: "Trending", icon: Star, ai: true },
-  { id: "6", name: "Motivacional", desc: "Inspirational quotes with dynamic visuals", category: "Popular", icon: Drama, ai: false },
-  { id: "7", name: "Podcast", desc: "Audio-first visual with waveform sync", category: "Trending", icon: Podcast, ai: true },
-  { id: "8", name: "Clipe", desc: "Music video style with beat synchronization", category: "Popular", icon: Music, ai: true },
-  { id: "9", name: "Game", desc: "Gaming montage with high-energy effects", category: "Trending", icon: Gamepad2, ai: true },
-  { id: "10", name: "Futurista", desc: "Cyberpunk neon aesthetic with glitch effects", category: "Popular", icon: Globe, ai: false },
-  { id: "11", name: "Dark", desc: "Moody dark theme with subtle transitions", category: "Popular", icon: Moon, ai: false },
-  { id: "12", name: "Luxo", desc: "Premium luxury brand showcase", category: "Trending", icon: Gem, ai: true },
+  { id: "cinema", name: "Cinema", desc: "Epic cinematic intro with dramatic transitions", category: "Trending", icon: Clapperboard, ai: true },
+  { id: "vlog", name: "Vlog", desc: "Casual storytelling for daily content", category: "Popular", icon: Film, ai: false },
+  { id: "viral", name: "Viral", desc: "High-energy clips for maximum engagement", category: "Trending", icon: Sparkles, ai: true },
+  { id: "shorts", name: "Shorts", desc: "Vertical short-form content optimized", category: "Popular", icon: Scissors, ai: true },
+  { id: "reels", name: "Reels", desc: "Instagram Reels with trending effects", category: "Trending", icon: Star, ai: true },
+  { id: "motivacional", name: "Motivacional", desc: "Inspirational quotes with dynamic visuals", category: "Popular", icon: Drama, ai: false },
+  { id: "podcast", name: "Podcast", desc: "Audio-first visual with waveform sync", category: "Trending", icon: Podcast, ai: true },
+  { id: "clipe", name: "Clipe", desc: "Music video style with beat synchronization", category: "Popular", icon: Music, ai: true },
+  { id: "game", name: "Game", desc: "Gaming montage with high-energy effects", category: "Trending", icon: Gamepad2, ai: true },
+  { id: "futurista", name: "Futurista", desc: "Cyberpunk neon aesthetic with glitch effects", category: "Popular", icon: Globe, ai: false },
+  { id: "dark", name: "Dark", desc: "Moody dark theme with subtle transitions", category: "Popular", icon: Moon, ai: false },
+  { id: "luxo", name: "Luxo", desc: "Premium luxury brand showcase", category: "Trending", icon: Gem, ai: true },
   { id: "marketing", name: "Marketing", desc: "Professional branding with CTA and voiceover", category: "Trending", icon: TrendingUp, ai: true },
 ];
 
@@ -131,6 +131,7 @@ export default function CreateVideoPage() {
   const [narrationVoice, setNarrationVoice] = useState("pt-BR-Female");
   const router = useRouter();
   const progressRef = useRef(0);
+  const xhrRefs = useRef<Map<string, XMLHttpRequest>>(new Map());
 
   const goNext = () => {
     if (step === 1 && !format) { toast.error("Please select a format"); return; }
@@ -142,48 +143,37 @@ export default function CreateVideoPage() {
     if (step > 1) { setDirection(-1); setStep((step - 1) as Step); }
   };
 
-  const simulateUpload = useCallback((files: FileList | File[]) => {
+  const addFiles = useCallback((files: FileList | File[]) => {
     const items: UploadItem[] = Array.from(files).map((file) => ({
       id: crypto.randomUUID(),
       name: file.name,
       size: file.size,
       type: file.type,
       progress: 0,
-      status: "uploading" as const,
+      status: "pending" as const,
       file,
     }));
     setUploads((prev) => [...prev, ...items]);
-    items.forEach((item) => {
-      const interval = setInterval(() => {
-        setUploads((prev) =>
-          prev.map((u) => {
-            if (u.id !== item.id) return u;
-            const next = Math.min(u.progress + Math.floor(Math.random() * 20) + 5, 100);
-            if (next >= 100) {
-              clearInterval(interval);
-              return { ...u, progress: 100, status: "complete" as const };
-            }
-            return { ...u, progress: next };
-          }),
-        );
-      }, 400);
-    });
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files.length) simulateUpload(e.dataTransfer.files);
-  }, [simulateUpload]);
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  }, [addFiles]);
 
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
   const handleDragLeave = () => setIsDragging(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) { simulateUpload(e.target.files); e.target.value = ""; }
+    if (e.target.files?.length) { addFiles(e.target.files); e.target.value = ""; }
   };
 
-  const removeUpload = (id: string) => setUploads((prev) => prev.filter((u) => u.id !== id));
+  const removeUpload = (id: string) => {
+    const xhr = xhrRefs.current.get(id);
+    if (xhr) xhr.abort();
+    setUploads((prev) => prev.filter((u) => u.id !== id));
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -212,22 +202,54 @@ export default function CreateVideoPage() {
 
       setStatusText("Uploading media...");
 
-      // Step 2: Upload files associated with the project
+      // Step 2: Upload files with real progress tracking
       const uploadIds: string[] = [];
       for (const item of uploads) {
-        const formData = new FormData();
-        formData.append("file", item.file);
-        const res = await fetch(`/api/upload/video?projectId=${pid}`, {
-          method: "POST",
-          body: formData,
-          credentials: "include",
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhrRefs.current.set(item.id, xhr);
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              setUploads((prev) =>
+                prev.map((u) => u.id === item.id ? { ...u, progress: pct, status: "uploading" as const } : u)
+              );
+            }
+          };
+
+          xhr.onload = () => {
+            xhrRefs.current.delete(item.id);
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const body = JSON.parse(xhr.responseText);
+                if (body.upload?.id) uploadIds.push(body.upload.id);
+              } catch { /* ignore parse error */ }
+              setUploads((prev) =>
+                prev.map((u) => u.id === item.id ? { ...u, progress: 100, status: "complete" as const } : u)
+              );
+              resolve();
+            } else {
+              reject(new Error(`Upload failed: ${xhr.statusText}`));
+            }
+          };
+
+          xhr.onerror = () => {
+            xhrRefs.current.delete(item.id);
+            reject(new Error("Network error during upload"));
+          };
+
+          xhr.onabort = () => {
+            xhrRefs.current.delete(item.id);
+            reject(new Error("Upload cancelled"));
+          };
+
+          const formData = new FormData();
+          formData.append("file", item.file);
+          xhr.open("POST", `/api/upload/video?projectId=${pid}`);
+          xhr.withCredentials = true;
+          xhr.send(formData);
         });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.error || "Upload failed");
-        }
-        const body = await res.json();
-        if (body.upload?.id) uploadIds.push(body.upload.id);
       }
 
       setStatusText("Starting video processing...");
@@ -326,6 +348,18 @@ export default function CreateVideoPage() {
       setProgress(0);
     }
   };
+
+  const cancelGeneration = useCallback(() => {
+    xhrRefs.current.forEach((xhr) => xhr.abort());
+    xhrRefs.current.clear();
+    if (jobId) {
+      fetch(`/api/video/cancel/${jobId}`, { method: "POST", credentials: "include" }).catch(() => {});
+    }
+    setIsGenerating(false);
+    setProgress(0);
+    setStatusText("Cancelled");
+    toast.info("Generation cancelled");
+  }, [jobId]);
 
   const templateCategories = ["All", "Trending", "Popular"];
   const filteredTemplates = templateFilter === "All"
@@ -525,7 +559,7 @@ export default function CreateVideoPage() {
                             <div className={cn(
                               "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                               item.status === "complete" && "bg-emerald-500/10",
-                              item.status === "uploading" && "bg-primary/10",
+                              (item.status === "uploading" || item.status === "pending") && "bg-primary/10",
                             )}>
                               {item.type.startsWith("video") && <FileVideo className={cn("h-5 w-5", item.status === "complete" ? "text-emerald-400" : "text-primary")} />}
                               {item.type.startsWith("image") && <FileImage className={cn("h-5 w-5", item.status === "complete" ? "text-emerald-400" : "text-primary")} />}
@@ -534,7 +568,7 @@ export default function CreateVideoPage() {
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{item.name}</p>
                               <p className="text-xs text-muted-foreground/60">{formatSize(item.size)}</p>
-                              {item.status === "uploading" && (
+                              {(item.status === "uploading" || item.status === "pending") && (
                                 <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-border/50">
                                   <motion.div className="h-full rounded-full bg-gradient-to-r from-primary via-purple-500 to-accent" style={{ width: `${item.progress}%` }} transition={{ duration: 0.3, ease: "easeOut" }} />
                                 </div>
@@ -542,6 +576,7 @@ export default function CreateVideoPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               {item.status === "uploading" && <span className="text-xs text-muted-foreground/60 font-mono min-w-[2rem] text-right">{item.progress}%</span>}
+                              {item.status === "pending" && <span className="text-xs text-muted-foreground/40">pending</span>}
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10" onClick={() => removeUpload(item.id)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -909,7 +944,7 @@ export default function CreateVideoPage() {
                   </motion.p>
                   <p className="text-center text-xs text-muted-foreground/40">{progress}% complete</p>
                 </div>
-                <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-destructive">
+                <Button variant="ghost" size="sm" className="text-muted-foreground/50 hover:text-destructive" onClick={cancelGeneration}>
                   Cancel
                 </Button>
               </div>

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs/promises';
 import { authenticate } from '../middleware/auth';
@@ -11,7 +11,6 @@ import { config } from '../config';
 import logger from '../config/logger';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate);
 

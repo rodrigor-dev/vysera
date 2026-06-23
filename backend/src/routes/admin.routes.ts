@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { authenticate, adminOnly } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { auditLog } from '../middleware/audit';
@@ -9,7 +9,6 @@ import { getAuditLogs } from '../services/audit.service';
 import logger from '../config/logger';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate, adminOnly);
 

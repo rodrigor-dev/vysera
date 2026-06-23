@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getUserPlan, checkResolutionAllowed, checkExportLimit } from '../services/payment/plan.service';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 declare global {
   namespace Express {

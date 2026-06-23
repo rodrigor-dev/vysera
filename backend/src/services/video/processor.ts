@@ -7,9 +7,11 @@ import { getVideoInfo, ensureFFmpeg, ensureTempDir, fileExists, getHardwareAccel
 import { buildAudioFilter } from '@/utils/ffmpeg-commands';
 import { detectScenes, removeSilence, detectBestMoments } from './scene.service';
 import { detectFaces, generateZoomKeyframes, applyAutoZoom } from './face.service';
-import { applyColorGrading, applyTransitions, addTextOverlay } from './effects.service';
+import { applyColorGrading, applyTransitions } from './effects.service';
+import { transcribeAudio, burnCaptions } from './caption.service';
 import { renderVideo, getFormatResolution } from './renderer.service';
 import { generateNarration } from './narration.service';
+import { getMusicByMood, downloadMusic, getMusicCacheDir } from '../music.service';
 
 export interface ProcessingOptions {
   inputPaths: string[];
@@ -190,8 +192,7 @@ export async function processVideo(
           .outputOptions('-c:a', 'aac', '-b:a', '128k')
           .save(denoiseOutput)
           .on('error', (err) => reject(new Error(`Denoise failed: ${err.message}`)))
-          .on('end', () => resolve())
-          .run();
+          .on('end', () => resolve());
       });
       currentInput = denoiseOutput;
       logger.info('Noise reduction complete');
@@ -244,19 +245,43 @@ export async function processVideo(
 
     let captionInput = effectsInput;
     if (options.addCaptions) {
-      const captionsOutput = path.join(tempDir, 'captioned.mp4');
-      const captionText = getCaptionText(options.captionStyle);
-      const fontSize = Math.round(firstInfo.height / 25);
+      try {
+        const captionsOutput = path.join(tempDir, 'captioned.mp4');
+        reportProgress('Add Captions', 10);
 
-      await addTextOverlay(captionInput, captionsOutput, captionText, {
-        fontSize,
-        position: 'bottom-center',
-        color: 'white',
-        backgroundColor: 'black@0.5',
-        animation: options.captionStyle === 'tiktok' ? 'fade-in' : options.captionStyle === 'shorts' ? 'slide-up' : 'none',
-      });
-      captionInput = captionsOutput;
-      reportProgress('Add Captions', 100);
+        // Extract audio for transcription
+        const audioForTranscription = path.join(tempDir, `caption_audio_${uuidv4()}.wav`);
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(captionInput)
+            .audioCodec('pcm_s16le')
+            .audioFrequency(16000)
+            .audioChannels(1)
+            .output(audioForTranscription)
+            .on('end', () => resolve())
+            .on('error', reject)
+            .run();
+        });
+        reportProgress('Add Captions', 30);
+
+        // Transcribe with Whisper (or fallback)
+        const segments = await transcribeAudio(audioForTranscription, 'pt');
+        await fs.unlink(audioForTranscription).catch(() => {});
+        reportProgress('Add Captions', 60);
+
+        if (segments.length > 0 && segments.some(s => s.text.length > 0)) {
+          const style = options.captionStyle || 'tiktok';
+          await burnCaptions(captionInput, captionsOutput, segments, {
+            animation: style as any,
+            fontSize: Math.round(firstInfo.height / 25),
+            position: 'bottom',
+          });
+          captionInput = captionsOutput;
+        }
+        reportProgress('Add Captions', 100);
+      } catch (err) {
+        logger.warn('Caption generation failed, skipping', { error: (err as Error).message });
+        reportProgress('Add Captions', 100);
+      }
     }
 
     setStageStatus('Add Captions', 'completed');
@@ -265,77 +290,55 @@ export async function processVideo(
     reportProgress('Mix Audio', 0);
 
     let audioInput = captionInput;
-    if (options.backgroundMusic) {
-      const musicExists = await fileExists(options.backgroundMusic);
-      if (musicExists) {
-        const audioOutput = path.join(tempDir, 'mixed_audio.mp4');
-        const musicVol = options.musicVolume ?? 0.3;
-
-        await new Promise<void>((resolve, reject) => {
-          ffmpeg()
-            .input(audioInput)
-            .input(options.backgroundMusic!)
-            .complexFilter([
-              `[1:a]volume=${musicVol}[music]`,
-              `[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
-            ], ['outa'])
-            .outputOptions('-c:v', 'copy')
-            .outputOptions('-c:a', 'aac', '-b:a', '192k')
-            .outputOptions('-map', '0:v')
-            .outputOptions('-map', '[outa]')
-            .save(audioOutput)
-            .on('error', (err) => {
-              logger.warn('Audio mixing failed, using original', { error: err.message });
-              resolve();
-            })
-            .on('end', () => {
-              audioInput = audioOutput;
-              resolve();
-            })
-            .run();
-        });
-        reportProgress('Mix Audio', 50);
+    if (options.backgroundMusic && options.backgroundMusic !== 'none' && options.backgroundMusic !== '') {
+      let musicPath = options.backgroundMusic;
+      const isValidPath = musicPath.includes('/') || musicPath.includes('\\') || musicPath.endsWith('.mp3') || musicPath.endsWith('.wav') || musicPath.endsWith('.aac');
+      if (!isValidPath) {
+        try {
+          const moodTracks = await getMusicByMood(options.backgroundMusic, 1);
+          if (moodTracks.length > 0 && moodTracks[0]) {
+            const downloaded = await downloadMusic(moodTracks[0].id);
+            if (downloaded?.cached) {
+              musicPath = path.join(getMusicCacheDir(), `${downloaded.id}.mp3`);
+            }
+          }
+        } catch (err) {
+          logger.warn('Failed to resolve background music, skipping', { error: (err as Error).message });
+          musicPath = '';
+        }
       }
-    }
+      if (musicPath) {
+        const musicExists = await fileExists(musicPath);
+        if (musicExists) {
+          const audioOutput = path.join(tempDir, 'mixed_audio.mp4');
+          const musicVol = options.musicVolume ?? 0.3;
 
-    if (options.narration?.enabled && options.narration.text) {
-      reportProgress('Mix Audio', 60);
-      try {
-        const narrationAudioPath = path.join(tempDir, `narration_${uuidv4()}.mp3`);
-        await generateNarration(
-          options.narration.text,
-          narrationAudioPath,
-          { voice: options.narration.voice, language: options.narration.language }
-        );
-
-        const narratedOutput = path.join(tempDir, 'narrated_audio.mp4');
-        await new Promise<void>((resolve, reject) => {
-          ffmpeg()
-            .input(audioInput)
-            .input(narrationAudioPath)
-            .complexFilter([
-              `[1:a]volume=1.0[narration]`,
-              `[0:a][narration]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
-            ], ['outa'])
-            .outputOptions('-c:v', 'copy')
-            .outputOptions('-c:a', 'aac', '-b:a', '192k')
-            .outputOptions('-map', '0:v')
-            .outputOptions('-map', '[outa]')
-            .save(narratedOutput)
-            .on('error', (err) => {
-              logger.warn('Narration mixing failed, using original audio', { error: err.message });
-              resolve();
-            })
-            .on('end', () => {
-              audioInput = narratedOutput;
-              resolve();
-            })
-            .run();
-        });
-      } catch (err) {
-        logger.warn('Narration generation failed, continuing without narration', { error: (err as Error).message });
+          await new Promise<void>((resolve, reject) => {
+            ffmpeg()
+              .input(audioInput)
+              .input(musicPath)
+              .complexFilter([
+                `[1:a]volume=${musicVol}[music]`,
+                `[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
+              ], ['outa'])
+              .output(audioOutput)
+              .outputOptions('-c:v', 'copy')
+              .outputOptions('-c:a', 'aac', '-b:a', '192k')
+              .outputOptions('-map', '0:v')
+              .outputOptions('-map', '[outa]')
+              .on('error', (err) => {
+                logger.warn('Audio mixing failed, using original', { error: err.message });
+                resolve();
+              })
+              .on('end', () => {
+                audioInput = audioOutput;
+                resolve();
+              })
+              .run();
+          });
+        }
       }
-      reportProgress('Mix Audio', 80);
+      reportProgress('Mix Audio', 50);
     }
 
     if (options.improveAudio) {
@@ -345,9 +348,9 @@ export async function processVideo(
       await new Promise<void>((resolve, reject) => {
         ffmpeg(audioInput)
           .audioFilter(audioFilters)
+          .output(improveOutput)
           .outputOptions('-c:v', 'copy')
           .outputOptions('-c:a', 'aac', '-b:a', '192k')
-          .save(improveOutput)
           .on('error', (err) => {
             logger.warn('Audio improvement failed, using original', { error: err.message });
             resolve();
@@ -438,20 +441,6 @@ async function concatInputs(inputPaths: string[], outputPath: string): Promise<v
       .on('end', async () => {
         await fs.unlink(listPath).catch(() => {});
         resolve();
-      })
-      .run();
+      });
   });
-}
-
-function getCaptionText(style: string): string {
-  switch (style) {
-    case 'tiktok':
-      return 'Captions coming soon...';
-    case 'shorts':
-      return 'Vysera AI';
-    case 'karaoke':
-      return '♪ Vysera ♪';
-    default:
-      return 'Vysera';
-  }
 }

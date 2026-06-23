@@ -1,9 +1,7 @@
 import app from './app';
 import { config } from './config';
 import logger from './config/logger';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 const port = config.port;
 
 async function main() {

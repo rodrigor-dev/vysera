@@ -398,21 +398,7 @@ export async function downloadMusic(trackId: string): Promise<MusicTrack | null>
       return { ...mockTrack, cached: true };
     }
 
-    const silentAudioPath = path.join(MUSIC_CACHE_DIR, `${mockTrack.id}.mp3`);
-    const ffmpeg = require('fluent-ffmpeg');
-
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg()
-        .input('anullsrc')
-        .inputOptions(['-f lavfi'])
-        .duration(mockTrack.duration)
-        .audioCodec('libmp3lame')
-        .output(silentAudioPath)
-        .on('end', () => resolve())
-        .on('error', reject)
-        .run();
-    });
-
+    await generateProceduralMusic(mockTrack, cachedPath);
     return { ...mockTrack, cached: true };
   }
 
@@ -450,6 +436,56 @@ export async function downloadMusic(trackId: string): Promise<MusicTrack | null>
     logger.error(`Download failed for ${trackId}: ${(error as Error).message}`);
     return track;
   }
+}
+
+type MoodProfile = {
+  baseFreq: number;
+  harmonics: number[];
+  amplitude: number;
+  tempo: number;
+  filter: string;
+};
+
+function getMoodProfile(mood: string): MoodProfile {
+  const profiles: Record<string, MoodProfile> = {
+    epic: { baseFreq: 110, harmonics: [1, 2, 3, 4.5, 6], amplitude: 0.3, tempo: 70, filter: 'lowpass=f=800' },
+    calm: { baseFreq: 130, harmonics: [1, 2, 3, 4], amplitude: 0.25, tempo: 50, filter: 'lowpass=f=400' },
+    energetic: { baseFreq: 200, harmonics: [1, 2, 3, 5, 7], amplitude: 0.35, tempo: 120, filter: 'equalizer=f=2000:width=200:gain=5' },
+    happy: { baseFreq: 260, harmonics: [1, 2.5, 4, 5.5], amplitude: 0.3, tempo: 100, filter: 'equalizer=f=3000:width=300:gain=4' },
+    dark: { baseFreq: 80, harmonics: [1, 1.5, 2, 3], amplitude: 0.3, tempo: 45, filter: 'lowpass=f=300,equalizer=f=100:width=50:gain=6' },
+    focus: { baseFreq: 150, harmonics: [1, 2, 3], amplitude: 0.2, tempo: 65, filter: 'lowpass=f=500' },
+    mysterious: { baseFreq: 100, harmonics: [1, 2.5, 5], amplitude: 0.25, tempo: 40, filter: 'lowpass=f=350,chorus=0.5:0.9:50:0.4:0.25:2' },
+  };
+  return (profiles[mood] || profiles.calm) as MoodProfile;
+}
+
+function generateProceduralMusic(track: MusicTrack, outputPath: string): Promise<void> {
+  const profile = getMoodProfile(track.mood);
+  const duration = Math.min(track.duration, 60);
+  const sampleRate = 44100;
+
+  const tones = profile.harmonics.map((h, i) => {
+    const freq = profile.baseFreq * h;
+    const vol = (profile.amplitude / (i + 1.5)).toFixed(3);
+    const phase = (Math.random() * 2 * Math.PI).toFixed(4);
+    return `sin(${freq}*2*PI*t+${phase})*${vol}`;
+  }).join('+');
+
+  const expression = `${tones}*min(1,max(0,1-abs(t-${duration/2})/(${duration/2})))`;
+
+  return new Promise((resolve, reject) => {
+    const ffmpeg = require('fluent-ffmpeg');
+    ffmpeg()
+      .input(`aevalsrc=exprs='${expression}':s=${sampleRate}:d=${duration}`)
+      .inputOptions(['-f lavfi'])
+      .audioFilters([profile.filter, 'volume=0.8'])
+      .audioCodec('libmp3lame')
+      .audioBitrate('128k')
+      .output(outputPath)
+      .on('end', () => { logger.info(`Generated procedural music: ${track.title} -> ${outputPath}`); resolve(); })
+      .on('error', (err: Error) => reject(err))
+      .run();
+  });
 }
 
 export function getLocalMusicLibrary(): MusicTrack[] {

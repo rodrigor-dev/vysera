@@ -1,12 +1,11 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { config } from '../config';
 import { createAuditLog, logSecurityEvent } from './audit.service';
 import logger from '../config/logger';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 export async function register(email: string, password: string, name: string) {
   const existing = await prisma.user.findUnique({ where: { email } });

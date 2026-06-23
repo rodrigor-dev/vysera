@@ -40,7 +40,7 @@ export async function renderVideo(
   const info = await getVideoInfo(inputPath);
   const quality = QUALITY_PRESETS[options.quality] || QUALITY_PRESETS.standard!;
   const hwAccel = getHardwareAcceleration();
-  const codec = options.codec || hwAccel || 'libx264';
+  const codec = options.codec || 'libx264';
 
   const targetRes = FORMAT_RESOLUTIONS[options.format] || FORMAT_RESOLUTIONS.horizontal!;
   const scaleFilter = buildScaleFilter(targetRes.width, targetRes.height);
@@ -58,13 +58,13 @@ export async function renderVideo(
         `-b:v ${options.bitrate || quality.videoBitrate}`,
         `-b:a ${options.audioBitrate || quality.audioBitrate}`,
         ...(options.fps ? [`-r ${options.fps}`] : []),
-        ...(hwAccel ? ['-hwaccel', 'auto'] : []),
         '-movflags', '+faststart',
       ])
       .save(outputPath);
 
+    let stderrLog = '';
     cmd.on('error', (err) => {
-      logger.error('Render error', { error: err.message });
+      logger.error('Render error', { error: err.message, stderr: stderrLog.slice(-1000) });
       reject(new Error(`Render failed: ${err.message}`));
     });
 
@@ -79,6 +79,7 @@ export async function renderVideo(
     });
 
     cmd.on('stderr', (line) => {
+      stderrLog += line + '\n';
       const match = line.match(/time=(\d+):(\d+):(\d+\.\d+)/);
       if (match) {
         const hours = parseInt(match[1]!, 10);
@@ -171,7 +172,7 @@ export async function exportForPlatform(
 
   const info = await getVideoInfo(inputPath);
   const hwAccel = getHardwareAcceleration();
-  const videoCodec = hwAccel || 'libx264';
+  const videoCodec = 'libx264';
 
   const formatKey = cfg.format as 'vertical' | 'horizontal' | 'square';
   const targetRes = FORMAT_RESOLUTIONS[formatKey] || FORMAT_RESOLUTIONS.horizontal!;
@@ -191,7 +192,6 @@ export async function exportForPlatform(
         `-b:v ${cfg.bitrate}`,
         `-b:a ${cfg.audioBitrate}`,
         `-r ${cfg.fps}`,
-        ...(hwAccel ? ['-hwaccel', 'auto'] : []),
         '-movflags', '+faststart',
       ])
       .save(outputPath);

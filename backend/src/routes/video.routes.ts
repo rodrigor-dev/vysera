@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import path from 'path';
 import fs from 'fs';
 import { authenticate } from '../middleware/auth';
@@ -12,7 +12,6 @@ import { getVideoInfo } from '../utils/ffmpeg';
 import { VideoWorker } from '../workers/video-worker';
 import logger from '../config/logger';
 
-const prisma = new PrismaClient();
 const router = Router();
 const videoWorker = new VideoWorker(2);
 videoWorker.start();

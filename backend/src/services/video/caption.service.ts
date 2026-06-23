@@ -1,8 +1,13 @@
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import ffmpeg from 'fluent-ffmpeg';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuid } from 'uuid';
 import logger from '@/config/logger';
+import { getVideoInfo } from '@/utils/ffmpeg';
+
+const execFileAsync = promisify(execFile);
 
 export interface CaptionWord {
   word: string;
@@ -247,7 +252,20 @@ export async function transcribeAudio(
       .run();
   });
 
-  const segments = energyBasedSegmentation(wavPath, language);
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey) {
+    try {
+      const segments = await transcribeWithOpenAI(wavPath, apiKey, language);
+      try { fs.unlinkSync(wavPath); } catch { }
+      return segments;
+    } catch (err) {
+      logger.warn('OpenAI Whisper transcription failed, falling back to basic segmentation', { error: (err as Error).message });
+    }
+  } else {
+    logger.warn('No OPENAI_API_KEY configured for captions, using local Whisper (faster-whisper).');
+  }
+
+  const segments = await transcribeWithLocalWhisper(wavPath, language);
 
   try {
     fs.unlinkSync(wavPath);
@@ -256,113 +274,74 @@ export async function transcribeAudio(
   return segments;
 }
 
-function energyBasedSegmentation(audioPath: string, language: string): CaptionSegment[] {
-  const segments: CaptionSegment[] = [];
-  const duration = getAudioDuration(audioPath);
-  if (duration <= 0) {
-    return [{ index: 0, text: '', words: [], start: 0, end: 0 }];
+async function transcribeWithOpenAI(
+  audioPath: string,
+  apiKey: string,
+  language: string
+): Promise<CaptionSegment[]> {
+  const audioBuffer = fs.readFileSync(audioPath);
+
+  const formData = new FormData();
+  formData.append('file', new Blob([audioBuffer], { type: 'audio/wav' }), 'audio.wav');
+  formData.append('model', 'whisper-1');
+  formData.append('response_format', 'verbose_json');
+  formData.append('language', language);
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => 'Unknown error');
+    throw new Error(`OpenAI Whisper API error: ${response.status} ${errorText}`);
   }
 
-  const sampleRate = 16000;
-  const frameSize = 0.025;
-  const hopSize = 0.010;
-  const frameSamples = Math.floor(frameSize * sampleRate);
-  const hopSamples = Math.floor(hopSize * sampleRate);
-  const totalFrames = Math.floor(duration / hopSize);
+  const data = await response.json() as any;
 
-  const energyThreshold = 0.015;
-  const minSilenceDuration = 0.3;
-  const minSegmentDuration = 0.5;
-  const maxSegmentDuration = 10.0;
+  const segments: CaptionSegment[] = (data.segments || []).map((seg: any, idx: number) => ({
+    index: seg.id ?? idx,
+    text: (seg.text || '').trim(),
+    start: seg.start ?? 0,
+    end: seg.end ?? 0,
+    words: (seg.words || []).map((w: any, i: number) => ({
+      word: (w.word || '').trim() || `word_${i}`,
+      start: w.start ?? 0,
+      end: w.end ?? 0,
+      confidence: w.probability ?? w.confidence ?? 0,
+    })),
+  }));
 
-  const energies: number[] = [];
+  return segments;
+}
 
-  for (let i = 0; i < totalFrames; i++) {
-    const time = i * hopSize;
-    const energy = estimateEnergyAtTime(audioPath, time, frameSamples, sampleRate);
-    energies.push(energy);
-  }
+async function transcribeWithLocalWhisper(audioPath: string, language: string): Promise<CaptionSegment[]> {
+  try {
+    const langArg = language || 'en';
+    const { stdout } = await execFileAsync('python', [
+      'scripts/transcribe.py',
+      audioPath,
+      langArg,
+    ], { timeout: 300000 });
 
-  const smoothedEnergies = smoothArray(energies, 5);
-  const adaptiveThreshold = adaptiveThresholdFromNoiseFloor(smoothedEnergies, energyThreshold);
-
-  let inSpeech = false;
-  let segmentStart = 0;
-  let silenceFrames = 0;
-  const silenceFrameThreshold = Math.round(minSilenceDuration / hopSize);
-  const minSegmentFrames = Math.round(minSegmentDuration / hopSize);
-  const maxSegmentFrames = Math.round(maxSegmentDuration / hopSize);
-  let segmentFrames = 0;
-
-  for (let i = 0; i < smoothedEnergies.length; i++) {
-    const energy = smoothedEnergies[i]!;
-    const time = i * hopSize;
-
-    if (energy > adaptiveThreshold) {
-      if (!inSpeech) {
-        inSpeech = true;
-        segmentStart = Math.max(0, time - 0.1);
-        segmentFrames = 0;
-        silenceFrames = 0;
-      }
-      silenceFrames = 0;
-      segmentFrames++;
-    } else {
-      if (inSpeech) {
-        silenceFrames++;
-        segmentFrames++;
-
-        if (silenceFrames >= silenceFrameThreshold || segmentFrames >= maxSegmentFrames) {
-          const segmentEnd = Math.min(time, duration);
-          if (segmentFrames >= minSegmentFrames && segmentEnd - segmentStart > 0.3) {
-            const wordSegments = generateWordLevelTimestamps(
-              segmentStart, segmentEnd, energies, i - silenceFrames, i, hopSize
-            );
-            const text = `Segment ${segments.length + 1}`;
-            segments.push({
-              index: segments.length,
-              text: wordSegments.map(w => w.word).join(' '),
-              words: wordSegments,
-              start: segmentStart,
-              end: segmentEnd,
-            });
-          }
-          inSpeech = false;
-          silenceFrames = 0;
-          segmentFrames = 0;
-        }
-      }
+    const segments: CaptionSegment[] = JSON.parse(stdout);
+    if (!Array.isArray(segments) || segments.length === 0) {
+      throw new Error('No segments returned');
     }
-  }
-
-  if (inSpeech) {
-    const segmentEnd = Math.min(totalFrames * hopSize, duration);
-    if (segmentFrames >= minSegmentFrames && segmentEnd - segmentStart > 0.3) {
-      const wordSegments = generateWordLevelTimestamps(
-        segmentStart, segmentEnd, energies,
-        smoothedEnergies.length - segmentFrames, smoothedEnergies.length, hopSize
-      );
-      segments.push({
-        index: segments.length,
-        text: wordSegments.map(w => w.word).join(' '),
-        words: wordSegments,
-        start: segmentStart,
-        end: segmentEnd,
-      });
-    }
-  }
-
-  if (segments.length === 0) {
-    segments.push({
+    logger.info(`Local Whisper transcription complete: ${segments.length} segments`);
+    return segments;
+  } catch (err) {
+    logger.warn('Local Whisper transcription failed, using basic fallback', { error: (err as Error).message });
+    const duration = getAudioDuration(audioPath);
+    return [{
       index: 0,
       text: language === 'pt' ? 'Áudio detectado' : 'Audio detected',
       words: [{ word: language === 'pt' ? 'Áudio detectado' : 'Audio detected', start: 0, end: duration, confidence: 0.5 }],
       start: 0,
       end: duration,
-    });
+    }];
   }
-
-  return segments;
 }
 
 function getAudioDuration(audioPath: string): number {
@@ -385,88 +364,6 @@ function getAudioDuration(audioPath: string): number {
   } catch { }
 
   return 30;
-}
-
-function estimateEnergyAtTime(audioPath: string, time: number, numSamples: number, sampleRate: number): number {
-  try {
-    const byteOffset = 44 + Math.floor(time * sampleRate) * 2;
-    const buffer = Buffer.alloc(numSamples * 2);
-    const fd = fs.openSync(audioPath, 'r');
-    const stat = fs.fstatSync(fd);
-    const bytesToRead = Math.min(numSamples * 2, stat.size - byteOffset);
-    if (bytesToRead > 0) {
-      fs.readSync(fd, buffer, 0, bytesToRead, Math.max(44, byteOffset));
-    }
-    fs.closeSync(fd);
-
-    let energy = 0;
-    let count = 0;
-    for (let i = 0; i < bytesToRead - 1; i += 2) {
-      const sample = buffer.readInt16LE(i);
-      energy += Math.abs(sample) / 32768;
-      count++;
-    }
-    return count > 0 ? energy / count : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function smoothArray(arr: number[], windowSize: number): number[] {
-  const result: number[] = [];
-  for (let i = 0; i < arr.length; i++) {
-    let sum = 0;
-    let count = 0;
-    for (let j = Math.max(0, i - windowSize); j <= Math.min(arr.length - 1, i + windowSize); j++) {
-      sum += arr[j]!;
-      count++;
-    }
-    result.push(count > 0 ? sum / count : 0);
-  }
-  return result;
-}
-
-function adaptiveThresholdFromNoiseFloor(energies: number[], baseThreshold: number): number {
-  const sorted = [...energies].sort((a, b) => a - b);
-  const noiseLen = Math.max(1, Math.floor(sorted.length * 0.2));
-  const noiseFloor = sorted.slice(0, noiseLen).reduce((a, b) => a + b, 0) / noiseLen;
-  const peak = sorted[sorted.length - 1] || 1;
-  return Math.max(baseThreshold, noiseFloor * 2.5, peak * 0.05);
-}
-
-function generateWordLevelTimestamps(
-  segmentStart: number,
-  segmentEnd: number,
-  energies: number[],
-  startFrame: number,
-  endFrame: number,
-  hopSize: number
-): CaptionWord[] {
-  const duration = segmentEnd - segmentStart;
-  const wordCount = Math.max(1, Math.round(duration / 0.2));
-  const words: CaptionWord[] = [];
-  const wordDuration = duration / wordCount;
-
-  const subEnergies = energies.slice(startFrame, endFrame);
-  const totalEnergy = subEnergies.reduce((a, b) => a + b, 0);
-  const avgEnergy = subEnergies.length > 0 ? totalEnergy / subEnergies.length : 0.01;
-
-  for (let i = 0; i < wordCount; i++) {
-    const wordStart = segmentStart + i * wordDuration;
-    const wordEnd = Math.min(wordStart + wordDuration, segmentEnd);
-    const wordEnergy = subEnergies.length > 0
-      ? Math.min(1, subEnergies[Math.floor((i / wordCount) * subEnergies.length)]! / (avgEnergy * 3))
-      : 0.5;
-
-    words.push({
-      word: `word_${i + 1}`,
-      start: wordStart,
-      end: wordEnd,
-      confidence: Math.min(1, Math.max(0.1, wordEnergy)),
-    });
-  }
-
-  return words;
 }
 
 export function generateSRT(captions: CaptionSegment[]): string {
@@ -618,10 +515,8 @@ function runFFmpegWithFilters(
 ): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     let command = ffmpeg(inputPath)
-      .outputOptions([
-        `-vf ${filterComplex}`,
-        '-c:a copy',
-      ])
+      .videoFilter(filterComplex)
+      .outputOptions(['-c:a', 'copy'])
       .output(outputPath);
 
     if (onProgress) {
@@ -650,22 +545,7 @@ function copyVideo(inputPath: string, outputPath: string): Promise<string> {
   });
 }
 
-async function getVideoInfo(videoPath: string): Promise<{ width: number; height: number; duration: number }> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(videoPath, (err, metadata) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      const stream = metadata.streams.find(s => s.codec_type === 'video');
-      resolve({
-        width: stream?.width || 1920,
-        height: stream?.height || 1080,
-        duration: metadata.format.duration || 30,
-      });
-    });
-  });
-}
+
 
 export async function applyTikTokStyle(
   segments: CaptionSegment[],

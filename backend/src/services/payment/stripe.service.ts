@@ -1,10 +1,8 @@
 import StripeConstructor from 'stripe';
-import { PrismaClient } from '@prisma/client';
 import logger from '../../config/logger';
 import { config } from '../../config';
 import { createSubscription, updateSubscription, createInvoice, syncUserRole } from './subscription.service';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
 
 let stripe: any = null;
 
