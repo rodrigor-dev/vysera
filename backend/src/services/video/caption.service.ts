@@ -569,7 +569,7 @@ export async function applyTikTokStyle(
   const vw = videoInfo.width || 1080;
   const vh = videoInfo.height || 1920;
 
-  const allWords = segments.flatMap(s => s.words.length > 0 ? s.words :
+  const allWords = segments.flatMap(s => (s.words && s.words.length > 0) ? s.words :
     [{ word: s.text, start: s.start, end: s.end, confidence: 1 }]
   );
 
@@ -683,7 +683,7 @@ export async function applyKaraokeStyle(
   const filters: string[] = [];
 
   for (const segment of segments) {
-    const segWords = segment.words.length > 0 ? segment.words :
+    const segWords = segment.words && segment.words.length > 0 ? segment.words :
       [{ word: segment.text, start: segment.start, end: segment.end, confidence: 1 }];
 
     const filter = buildKaraokeFilter(

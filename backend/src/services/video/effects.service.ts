@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import logger from '@/config/logger';
 import { getVideoInfo } from '@/utils/ffmpeg';
-import { buildColorGradingFilter, buildTransitionFilter, buildTextFilter } from '@/utils/ffmpeg-commands';
+import { buildColorGradingFilter, buildTextFilter } from '@/utils/ffmpeg-commands';
 
 export const COLOR_STYLES: Record<string, string> = {
   cinematic: 'cinematic',
@@ -78,15 +78,41 @@ export async function applyTransitions(
   }
 
   const transitionDuration = 0.5;
-  const transitionFilter = buildTransitionFilter(style, transitionDuration);
+  const transitionName = getTransitionName(style);
 
   const info = await getVideoInfo(inputPath);
+
+  // Build filter: split -> trim each segment -> xfade chain
+  const filterParts: string[] = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]!;
+    filterParts.push(
+      `[0:v]trim=start=${seg.start}:end=${seg.end},setpts=PTS-STARTPTS[s${i}]`
+    );
+  }
+
+  let lastLabel = 's0';
+  for (let i = 1; i < segments.length; i++) {
+    const label = `x${i}`;
+    filterParts.push(
+      `[${lastLabel}][s${i}]xfade=transition=${transitionName}:duration=${transitionDuration}[${label}]`
+    );
+    lastLabel = label;
+  }
+
+  filterParts.push(
+    `[0:a]atrim=start=${segments[0]!.start}:end=${segments[segments.length - 1]!.end},asetpts=PTS-STARTPTS[aout]`
+  );
+
+  const filterChain = filterParts.join(';');
+  const outputDir = path.dirname(outputPath);
+  await fs.mkdir(outputDir, { recursive: true }).catch(() => {});
 
   return new Promise((resolve, reject) => {
     let lastProgress = 0;
 
     const cmd = ffmpeg(inputPath)
-      .videoFilter(transitionFilter)
+      .complexFilter(filterChain, [`[${lastLabel}]`, '[aout]'])
       .outputOptions('-c:v', 'libx264', '-preset', 'medium', '-crf', '20')
       .outputOptions('-c:a', 'aac', '-b:a', '128k')
       .save(outputPath);
@@ -108,7 +134,9 @@ export async function applyTransitions(
         const minutes = parseInt(match[2]!, 10);
         const seconds = parseFloat(match[3]!);
         const currentTime = hours * 3600 + minutes * 60 + seconds;
-        const progress = Math.min(99, Math.round((currentTime / info.duration) * 100));
+        const totalDuration = segments.reduce((sum, s) => sum + (s.end - s.start), 0)
+          + (segments.length - 1) * transitionDuration;
+        const progress = Math.min(99, Math.round((currentTime / totalDuration) * 100));
         if (progress > lastProgress) {
           lastProgress = progress;
           onProgress?.(progress);
@@ -116,6 +144,18 @@ export async function applyTransitions(
       }
     });
   });
+}
+
+function getTransitionName(style: string): string {
+  switch (style) {
+    case 'fade': return 'fade';
+    case 'slide': return 'slideright';
+    case 'zoom': return 'zoomin';
+    case 'wipe': return 'wiperight';
+    case 'glitch': return 'random';
+    case 'smooth': return 'fadeblack';
+    default: return 'fade';
+  }
 }
 
 export async function addTextOverlay(

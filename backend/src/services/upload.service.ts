@@ -144,7 +144,7 @@ function isExecutableFile(filename: string): boolean {
   return EXECUTABLE_EXTENSIONS.includes(ext);
 }
 
-async function verifyMagicBytes(buffer: Buffer, mimeType: string): Promise<boolean> {
+export async function verifyMagicBytes(buffer: Buffer, mimeType: string): Promise<boolean> {
   const checks = MAGIC_BYTE_CHECKS[mimeType];
   if (!checks) return true;
 
