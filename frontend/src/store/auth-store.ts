@@ -112,12 +112,15 @@ export const useAuthStore = create<AuthState>()(
           // accessToken expired, try refresh
           if (res.status === 401) {
             try {
+              const refreshController = new AbortController();
+              const refreshTimeout = setTimeout(() => refreshController.abort(), 15000);
               const refreshRes = await fetch("/api/auth/refresh", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                signal: AbortSignal.timeout(15000),
+                signal: refreshController.signal,
               });
+              clearTimeout(refreshTimeout);
               if (refreshRes.ok) {
                 const refreshBody = await refreshRes.json();
                 if (refreshBody.user) {

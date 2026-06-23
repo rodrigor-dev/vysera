@@ -238,7 +238,7 @@ export default function TemplatesPage() {
 
                 <div className="p-4">
                   <h3 className="font-semibold">
-                    {"name" in template ? template.name : (template as any).name}
+                    {"name" in template ? template.name : (template as any).name ?? "Untitled"}
                   </h3>
                   <p className="mt-1 line-clamp-2 text-sm text-muted-foreground/70">
                     {"description" in template

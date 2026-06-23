@@ -63,7 +63,7 @@ export function OAuthButtons({ isLoading, onLoadingChange }: OAuthButtonsProps) 
     try {
       const supabase = createClient();
       const csrfToken = generateCSRFToken();
-      sessionStorage.setItem("oauth-csrf-token", csrfToken);
+      try { sessionStorage.setItem("oauth-csrf-token", csrfToken); } catch {}
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider,

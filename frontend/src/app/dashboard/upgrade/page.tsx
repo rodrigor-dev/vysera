@@ -240,7 +240,7 @@ export default function UpgradePage() {
 
       <div className="grid gap-6 lg:grid-cols-3 lg:gap-8 max-w-5xl mx-auto">
         {plans.map((plan, index) => {
-          const PlanIcon = planIcons[index]!;
+          const PlanIcon = planIcons[index] ?? Sparkles;
           const priceId = getPriceId(plan.name);
           const isProPlan = plan.name === "Pro";
 
