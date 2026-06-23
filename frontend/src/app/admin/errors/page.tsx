@@ -10,6 +10,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Circle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -94,11 +95,19 @@ const severityConfig: Record<Severity, { label: string; style: string }> = {
   critical: { label: "Critical", style: "bg-red-500/10 text-red-400 border-red-500/20" },
 };
 
+function safeSeverity(severity: string) {
+  return severityConfig[severity as Severity] ?? { label: severity, style: "bg-muted/20 text-muted-foreground" };
+}
+
 const statusConfig: Record<ResolutionStatus, { label: string; icon: React.ReactNode; style: string }> = {
   open: { label: "Open", icon: <XCircle className="h-3 w-3" />, style: "text-red-500" },
   investigating: { label: "Investigating", icon: <Clock className="h-3 w-3" />, style: "text-amber-500" },
   resolved: { label: "Resolved", icon: <CheckCircle className="h-3 w-3" />, style: "text-emerald-500" },
 };
+
+function safeStatus(status: string) {
+  return statusConfig[status as ResolutionStatus] ?? { label: status, icon: <Circle className="h-3 w-3" />, style: "text-muted-foreground" };
+}
 
 const statusTabs = [
   { label: "All", value: "all" },
@@ -131,7 +140,7 @@ function ErrorCard({ error }: { error: ErrorEntry }) {
         <div className="flex flex-1 items-center gap-3">
           <div className={cn(
             "rounded-lg p-2 transition-all duration-300",
-            severityConfig[error.severity].style
+            safeSeverity(error.severity).style
           )}>
             <AlertTriangle className="h-4 w-4" />
           </div>
@@ -140,17 +149,17 @@ function ErrorCard({ error }: { error: ErrorEntry }) {
               <p className="text-sm font-medium truncate">{error.message}</p>
               <span className={cn(
                 "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shrink-0",
-                severityConfig[error.severity].style
+                safeSeverity(error.severity).style
               )}>
-                {severityConfig[error.severity].label}
+                {safeSeverity(error.severity).label}
               </span>
             </div>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <span className="text-xs text-muted-foreground">{error.source}</span>
               <span className="text-xs text-muted-foreground">{error.count} occurrences</span>
-              <span className={cn("flex items-center gap-1 text-xs", statusConfig[error.status].style)}>
-                {statusConfig[error.status].icon}
-                {statusConfig[error.status].label}
+              <span className={cn("flex items-center gap-1 text-xs", safeStatus(error.status).style)}>
+                {safeStatus(error.status).icon}
+                {safeStatus(error.status).label}
               </span>
             </div>
           </div>

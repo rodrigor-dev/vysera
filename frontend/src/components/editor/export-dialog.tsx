@@ -109,6 +109,12 @@ export function ExportDialog({ open, onOpenChange, projectId, projectName, input
         return;
       }
 
+      if (!data?.export?.id || !data?.job?.id) {
+        toast.error("Invalid server response");
+        setExporting(false);
+        return;
+      }
+
       setExportResult({ exportId: data.export.id, jobId: data.job.id });
       toast.success("Export started");
     } catch (err) {

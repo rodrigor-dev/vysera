@@ -53,6 +53,10 @@ const severityConfig: Record<Severity, { label: string; style: string }> = {
   critical: { label: "Critical", style: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
 };
 
+function safeSeverity(level: string) {
+  return severityConfig[level as Severity] ?? { label: level, style: "bg-muted/20 text-muted-foreground border-border/20" };
+}
+
 const severityPills = [
   { label: "All", value: "all" },
   { label: "Info", value: "info" },
@@ -161,8 +165,8 @@ export default function AdminLogs() {
                   >
                     <TableCell className="font-mono text-xs text-muted-foreground">{log.timestamp}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${severityConfig[log.level].style}`}>
-                        {severityConfig[log.level].label}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${safeSeverity(log.level).style}`}>
+                        {safeSeverity(log.level).label}
                       </span>
                     </TableCell>
                     <TableCell className="text-sm font-medium">{log.source}</TableCell>

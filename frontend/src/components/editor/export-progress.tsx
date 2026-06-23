@@ -52,24 +52,25 @@ export function ExportProgress({ exportId, projectName, onComplete }: ExportProg
       }
 
       const data = await res.json();
+      const progress = data?.progress;
 
-      if (data.progress) {
-        setStatus(data.progress.status);
-        setProgress(data.progress.progress);
-        if (data.progress.stage) setStage(data.progress.stage);
-        if (data.progress.error) setError(data.progress.error);
-      }
+      if (progress) {
+        setStatus(progress.status);
+        setProgress(progress.progress);
+        if (progress.stage) setStage(progress.stage);
+        if (progress.error) setError(progress.error);
 
-      if (data.progress.status === "completed") {
-        setDownloadUrl(`/api/exports/${exportId}/download`);
-        setProgress(100);
-        setStage("Completed");
-        toast.success("Export completed!");
-      }
+        if (progress.status === "completed") {
+          setDownloadUrl(`/api/exports/${exportId}/download`);
+          setProgress(100);
+          setStage("Completed");
+          toast.success("Export completed!");
+        }
 
-      if (data.progress.status === "failed") {
-        setError(data.progress.error || "Export failed");
-        toast.error("Export failed");
+        if (progress.status === "failed") {
+          setError(progress.error || "Export failed");
+          toast.error("Export failed");
+        }
       }
     } catch {
       // silent retry

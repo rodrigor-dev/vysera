@@ -94,12 +94,12 @@ export default function SettingsPage() {
     if (activeTab !== "billing") return;
     setSubLoading(true);
     Promise.all([
-      fetch("/api/subscriptions/active", { credentials: "include" }).then((r) => r.json()),
-      fetch("/api/subscriptions/invoices", { credentials: "include" }).then((r) => r.json()),
+      fetch("/api/subscriptions/active", { credentials: "include" }).then((r) => r.json().catch(() => ({}))),
+      fetch("/api/subscriptions/invoices", { credentials: "include" }).then((r) => r.json().catch(() => ({}))),
     ])
       .then(([subData, invData]) => {
-        setActiveSub(subData.subscription || null);
-        setInvoices(invData.invoices || []);
+        setActiveSub(subData?.subscription || null);
+        setInvoices(invData?.invoices || []);
       })
       .catch(() => {})
       .finally(() => setSubLoading(false));
@@ -127,7 +127,7 @@ export default function SettingsPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to save profile");
-      useAuthStore.getState().setUser({ ...user, name, email } as any);
+      useAuthStore.getState().setUser({ ...user, name: name ?? user.name, email: email ?? user.email });
       toast.success("Profile updated successfully");
     } catch {
       toast.error("Failed to save profile");

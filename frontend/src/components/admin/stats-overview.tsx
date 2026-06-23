@@ -97,7 +97,7 @@ export function StatsOverview({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {stats.map((stat, index) => {
-        const config = iconConfigs[index]!;
+        const config = iconConfigs[index] ?? { bg: "bg-muted/20", color: "text-muted-foreground", glow: "" };
         return (
           <motion.div
             key={stat.label}
