@@ -314,27 +314,28 @@ export async function processVideo(
           const musicVol = options.musicVolume ?? 0.3;
 
           await new Promise<void>((resolve, reject) => {
-            ffmpeg()
-              .input(audioInput)
-              .input(musicPath)
-              .complexFilter([
-                `[1:a]volume=${musicVol}[music]`,
-                `[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
-              ], ['outa'])
-              .output(audioOutput)
-              .outputOptions('-c:v', 'copy')
-              .outputOptions('-c:a', 'aac', '-b:a', '192k')
-              .outputOptions('-map', '0:v')
-              .outputOptions('-map', '[outa]')
-              .on('error', (err) => {
-                logger.warn('Audio mixing failed, using original', { error: err.message });
-                resolve();
-              })
-              .on('end', () => {
+            const { execFile } = require('child_process');
+            const ffmpegPath = (() => { try { return require('ffmpeg-static'); } catch { return 'ffmpeg'; } })();
+            const args = [
+              '-y',
+              '-i', audioInput,
+              '-i', musicPath,
+              '-filter_complex', `[1:a]volume=${musicVol}[music];[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[outa]`,
+              '-map', '0:v',
+              '-map', '[outa]',
+              '-c:v', 'copy',
+              '-c:a', 'aac',
+              '-b:a', '192k',
+              audioOutput,
+            ];
+            execFile(ffmpegPath, args, { timeout: 60000 }, (err: Error | null, _stdout: string, stderr: string) => {
+              if (err) {
+                logger.warn('Audio mixing failed, using original', { error: err.message, stderr: stderr.slice(0, 500) });
+              } else {
                 audioInput = audioOutput;
-                resolve();
-              })
-              .run();
+              }
+              resolve();
+            });
           });
         }
       }

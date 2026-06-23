@@ -64,7 +64,7 @@ const MOCK_TRACKS: MusicTrack[] = [
   { id: 'mock-cinematic-1', title: 'Epic Cinematic Rise', artist: 'Vysera Studio', duration: 180, genre: 'cinematic', mood: 'epic', tempo: 120, source: 'pixabay', url: '', previewUrl: '', cached: false },
   { id: 'mock-calm-1', title: 'Gentle Ambient Waves', artist: 'Vysera Studio', duration: 240, genre: 'ambient', mood: 'calm', tempo: 70, source: 'pixabay', url: '', previewUrl: '', cached: false },
   { id: 'mock-energetic-1', title: 'High Energy Pop Beat', artist: 'Vysera Studio', duration: 210, genre: 'pop', mood: 'energetic', tempo: 128, source: 'mixkit', url: '', previewUrl: '', cached: false },
-  { id: 'mock-energetic-2', title: 'Upbeat Electronic Groove', artist: 'Vysera Studio', duration: 195, genre: 'electronic', mood: 'energetic', tempo: 126, source: 'mixkit', url: '', previewUrl: '', cached: false },
+  { id: 'mock-energetic-2', title: 'Upbeat Electronic Groove', artist: 'Vysera Studio', duration: 195, genre: 'electronic', mood: 'upbeat', tempo: 126, source: 'mixkit', url: '', previewUrl: '', cached: false },
   { id: 'mock-calm-2', title: 'Soft Piano Reflections', artist: 'Vysera Studio', duration: 300, genre: 'classical', mood: 'calm', tempo: 60, source: 'fma', url: '', previewUrl: '', cached: false },
   { id: 'mock-cinematic-2', title: 'Dark Orchestral Theme', artist: 'Vysera Studio', duration: 270, genre: 'cinematic', mood: 'dark', tempo: 90, source: 'fma', url: '', previewUrl: '', cached: false },
   { id: 'mock-happy-1', title: 'Happy Ukulele Day', artist: 'Vysera Studio', duration: 150, genre: 'folk', mood: 'happy', tempo: 110, source: 'pixabay', url: '', previewUrl: '', cached: false },
@@ -90,6 +90,7 @@ function ensureCacheDir(): void {
 function trackMatchesMood(track: MusicTrack, mood: string): boolean {
   const moodLower = mood.toLowerCase();
   return track.mood.toLowerCase() === moodLower
+    || (moodLower === 'upbeat' && track.tempo >= 110)
     || (moodLower === 'energetic' && track.tempo >= 120)
     || (moodLower === 'calm' && track.tempo < 100)
     || (moodLower === 'happy' && track.mood === 'happy')
@@ -417,8 +418,16 @@ export async function downloadMusic(trackId: string): Promise<MusicTrack | null>
   }
 
   if (!track.url) {
-    logger.warn(`Track ${trackId} has no download URL`);
-    return track;
+    logger.warn(`Track ${trackId} has no download URL, generating procedurally`);
+    const cachedPath = path.join(MUSIC_CACHE_DIR, `${trackId}.mp3`);
+
+    if (!fs.existsSync(cachedPath)) {
+      const wavPath = cachedPath.replace(/\.mp3$/, '.wav');
+      const { generateMusic } = require('./music-generator.service');
+      await generateMusic(track.mood, Math.min(track.duration, 60), wavPath);
+    }
+
+    return { ...track, cached: true };
   }
 
   try {
@@ -438,54 +447,11 @@ export async function downloadMusic(trackId: string): Promise<MusicTrack | null>
   }
 }
 
-type MoodProfile = {
-  baseFreq: number;
-  harmonics: number[];
-  amplitude: number;
-  tempo: number;
-  filter: string;
-};
-
-function getMoodProfile(mood: string): MoodProfile {
-  const profiles: Record<string, MoodProfile> = {
-    epic: { baseFreq: 110, harmonics: [1, 2, 3, 4.5, 6], amplitude: 0.3, tempo: 70, filter: 'lowpass=f=800' },
-    calm: { baseFreq: 130, harmonics: [1, 2, 3, 4], amplitude: 0.25, tempo: 50, filter: 'lowpass=f=400' },
-    energetic: { baseFreq: 200, harmonics: [1, 2, 3, 5, 7], amplitude: 0.35, tempo: 120, filter: 'equalizer=f=2000:width=200:gain=5' },
-    happy: { baseFreq: 260, harmonics: [1, 2.5, 4, 5.5], amplitude: 0.3, tempo: 100, filter: 'equalizer=f=3000:width=300:gain=4' },
-    dark: { baseFreq: 80, harmonics: [1, 1.5, 2, 3], amplitude: 0.3, tempo: 45, filter: 'lowpass=f=300,equalizer=f=100:width=50:gain=6' },
-    focus: { baseFreq: 150, harmonics: [1, 2, 3], amplitude: 0.2, tempo: 65, filter: 'lowpass=f=500' },
-    mysterious: { baseFreq: 100, harmonics: [1, 2.5, 5], amplitude: 0.25, tempo: 40, filter: 'lowpass=f=350,chorus=0.5:0.9:50:0.4:0.25:2' },
-  };
-  return (profiles[mood] || profiles.calm) as MoodProfile;
-}
-
 function generateProceduralMusic(track: MusicTrack, outputPath: string): Promise<void> {
-  const profile = getMoodProfile(track.mood);
   const duration = Math.min(track.duration, 60);
-  const sampleRate = 44100;
-
-  const tones = profile.harmonics.map((h, i) => {
-    const freq = profile.baseFreq * h;
-    const vol = (profile.amplitude / (i + 1.5)).toFixed(3);
-    const phase = (Math.random() * 2 * Math.PI).toFixed(4);
-    return `sin(${freq}*2*PI*t+${phase})*${vol}`;
-  }).join('+');
-
-  const expression = `${tones}*min(1,max(0,1-abs(t-${duration/2})/(${duration/2})))`;
-
-  return new Promise((resolve, reject) => {
-    const ffmpeg = require('fluent-ffmpeg');
-    ffmpeg()
-      .input(`aevalsrc=exprs='${expression}':s=${sampleRate}:d=${duration}`)
-      .inputOptions(['-f lavfi'])
-      .audioFilters([profile.filter, 'volume=0.8'])
-      .audioCodec('libmp3lame')
-      .audioBitrate('128k')
-      .output(outputPath)
-      .on('end', () => { logger.info(`Generated procedural music: ${track.title} -> ${outputPath}`); resolve(); })
-      .on('error', (err: Error) => reject(err))
-      .run();
-  });
+  const wavPath = outputPath.replace(/\.mp3$/, '.wav');
+  const { generateMusic } = require('./music-generator.service');
+  return generateMusic(track.mood, duration, wavPath);
 }
 
 export function getLocalMusicLibrary(): MusicTrack[] {
