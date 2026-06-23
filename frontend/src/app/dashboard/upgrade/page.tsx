@@ -178,7 +178,10 @@ export default function UpgradePage() {
 
   const getPriceId = (planName: string) => {
     const plan = plansData.find((p) => p.name.toLowerCase() === planName.toLowerCase());
-    return plan?.stripePriceId || null;
+    if (plan?.stripePriceId) return plan.stripePriceId;
+    if (planName === "Pro") return billing === "monthly" ? "price_pro_monthly" : "price_pro_annual";
+    if (planName === "Ultra") return billing === "monthly" ? "price_enterprise_monthly" : "price_enterprise_annual";
+    return null;
   };
 
   const price = (planName: string) => {

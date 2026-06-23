@@ -18,6 +18,7 @@ export function MPCheckout({
   billingType,
   className,
   children,
+  variant = "default",
 }: MPCheckoutProps) {
   const [loading, setLoading] = useState(false);
 
@@ -53,6 +54,7 @@ export function MPCheckout({
     <Button
       onClick={handleCheckout}
       disabled={loading}
+      variant={variant}
       className={className}
     >
       {loading ? (

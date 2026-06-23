@@ -118,6 +118,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveProfile = async () => {
+    if (!user) { toast.error("Not authenticated"); return; }
     try {
       const res = await fetch("/api/user/profile", {
         method: "PUT",
@@ -126,7 +127,7 @@ export default function SettingsPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to save profile");
-      useAuthStore.getState().setUser({ ...user!, name, email } as any);
+      useAuthStore.getState().setUser({ ...user, name, email } as any);
       toast.success("Profile updated successfully");
     } catch {
       toast.error("Failed to save profile");

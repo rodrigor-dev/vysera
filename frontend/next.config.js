@@ -33,12 +33,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co;
-              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-              img-src 'self' data: blob: https://*.supabase.co https://avatars.githubusercontent.com https://lh3.googleusercontent.com;
-              font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com;
-              connect-src 'self' https://*.supabase.co http://localhost:4000 https://vysera-backend.onrender.com;
-              frame-src 'self' https://*.supabase.co;
+              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://translate.google.com;
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com;
+              img-src 'self' data: blob: https://*.supabase.co https://avatars.githubusercontent.com https://lh3.googleusercontent.com https://www.gstatic.com;
+              font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com https://www.gstatic.com;
+              frame-src 'self' https://*.supabase.co https://translate.google.com;
               object-src 'none';
               base-uri 'self';
               form-action 'self';
