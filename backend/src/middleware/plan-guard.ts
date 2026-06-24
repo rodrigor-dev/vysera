@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { getUserPlan, checkResolutionAllowed, checkExportLimit } from '../services/payment/plan.service';
+import {
+  getUserPlan,
+  checkResolutionAllowed,
+  checkExportLimit,
+  checkUploadLimit,
+  checkFeature,
+} from '../services/payment/plan.service';
 import prisma from '@/lib/prisma';
 
 declare global {
@@ -114,4 +120,66 @@ export async function requireProjectLimit(req: Request, res: Response, next: Nex
   }
 
   next();
+}
+
+export async function requireUploadLimit(req: Request, res: Response, next: NextFunction): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+
+  const monthlyCount = await prisma.upload.count({
+    where: {
+      userId: req.user.userId,
+      createdAt: { gte: monthStart },
+    },
+  });
+
+  const { allowed, limit } = checkUploadLimit(
+    { role: (req.user as any).role, proExpiresAt: (req.user as any).proExpiresAt },
+    monthlyCount,
+  );
+
+  if (!allowed) {
+    res.status(429).json({
+      error: `Monthly upload limit reached (${limit}). Upgrade to Pro for more uploads.`,
+      upgradeRequired: true,
+      requiredPlan: 'pro',
+      limit,
+      used: monthlyCount,
+    });
+    return;
+  }
+
+  next();
+}
+
+export function requirePlanFeature(feature: Parameters<typeof checkFeature>[1], message: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const enabled = checkFeature(
+      { role: (req.user as any).role, proExpiresAt: (req.user as any).proExpiresAt },
+      feature,
+    );
+
+    if (!enabled) {
+      res.status(403).json({
+        error: message,
+        upgradeRequired: true,
+        requiredPlan: 'pro',
+        feature,
+      });
+      return;
+    }
+
+    next();
+  };
 }

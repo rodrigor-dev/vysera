@@ -10,6 +10,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { VyseraLogo } from "@/components/shared/vysera-logo";
+import { LoadingSpinner } from "@/components/shared/loading-spinner";
 
 export default function DashboardLayout({
   children,
@@ -34,33 +35,22 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0a0a0a]">
+      <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-6">
           <VyseraLogo size="xl" animated />
-          <div className="flex items-center gap-1">
-            <motion.div
-              className="h-1.5 w-1.5 rounded-full bg-primary"
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
-            />
-            <motion.div
-              className="h-1.5 w-1.5 rounded-full bg-primary"
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-            />
-            <motion.div
-              className="h-1.5 w-1.5 rounded-full bg-primary"
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
-            />
-          </div>
+          <LoadingSpinner text="Carregando seu workspace..." />
         </div>
       </div>
     );
   }
 
   if (!user) {
-    return null;
+    return (
+      <LoadingSpinner
+        variant="full-page"
+        text="Redirecionando para o login..."
+      />
+    );
   }
 
   return (

@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { authenticate } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/security';
+import { checkFeature } from '../services/payment/plan.service';
 import { pipelineService } from '../services/video/pipeline.service';
 import { progressService } from '../services/video/progress.service';
 import { getAllTemplates, getTemplate, getTemplatesByCategory, applyTemplateToOptions, getTemplateConfig } from '../services/video/template.service';
@@ -42,6 +43,26 @@ router.post('/create', async (req: Request, res: Response) => {
     const mergedOptions = template
       ? applyTemplateToOptions(template, { format, ...options })
       : { format, ...options };
+
+    const wantsProAi =
+      Boolean(mergedOptions?.voiceover || mergedOptions?.aiVoiceover || mergedOptions?.advancedEffects) ||
+      ['cinematic', 'viral', 'podcast-pro'].includes(String(template || ''));
+
+    if (wantsProAi) {
+      const allowed = checkFeature(
+        { role: (req.user as any).role || 'user', proExpiresAt: (req.user as any).proExpiresAt || null },
+        'aiVoiceover',
+      );
+
+      if (!allowed) {
+        res.status(403).json({
+          error: 'Advanced AI video tools are available on the Pro plan.',
+          upgradeRequired: true,
+          requiredPlan: 'pro',
+        });
+        return;
+      }
+    }
 
     const job = await pipelineService.createJob(
       projectId,

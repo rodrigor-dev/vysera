@@ -34,7 +34,13 @@ function ResetPasswordContent() {
     );
   }
 
-  if (user) return null;
+  if (user) {
+    return (
+      <AuthFormLayout>
+        <LoadingSpinner size="lg" className="py-12" text="Redirecionando..." />
+      </AuthFormLayout>
+    );
+  }
 
   return (
     <AuthFormLayout title="Reset your password" subtitle="Choose a new password for your account">

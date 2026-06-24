@@ -162,6 +162,28 @@ export function checkExportLimit(
   };
 }
 
+export function checkUploadLimit(
+  user: { role: string; proExpiresAt?: Date | null },
+  monthlyCount: number,
+): { allowed: boolean; limit: number } {
+  const plan = getUserPlan(user);
+  return {
+    allowed: monthlyCount < plan.features.maxUploadsPerMonth,
+    limit: plan.features.maxUploadsPerMonth,
+  };
+}
+
+export function checkDurationAllowed(
+  user: { role: string; proExpiresAt?: Date | null },
+  durationSeconds: number,
+): { allowed: boolean; limit: number } {
+  const plan = getUserPlan(user);
+  return {
+    allowed: durationSeconds <= plan.features.maxDurationSeconds,
+    limit: plan.features.maxDurationSeconds,
+  };
+}
+
 export function shouldApplyWatermark(user: { role: string; proExpiresAt?: Date | null }): boolean {
   return checkFeature(user, 'watermark');
 }
