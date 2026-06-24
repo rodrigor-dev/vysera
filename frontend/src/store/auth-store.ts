@@ -145,15 +145,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         accessToken: state.accessToken,
       }),
-      onRehydrateStorage: () => {
-        return (state) => {
-          if (state?.accessToken) {
-            state.refreshSession();
-          } else {
-            state?.setLoading(false);
-          }
-        };
-      },
     },
   ),
 );

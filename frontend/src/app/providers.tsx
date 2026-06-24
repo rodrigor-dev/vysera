@@ -9,12 +9,32 @@ import { useAuthStore } from "@/store/auth-store";
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLocale(getLocale());
-    const store = useAuthStore.getState();
-    if (store.accessToken) {
-      store.refreshSession();
+    const state = useAuthStore.getState();
+
+    const unsub = useAuthStore.persist?.onFinishHydration?.(() => {
+      const s = useAuthStore.getState();
+      if (s.accessToken) {
+        s.refreshSession();
+      } else {
+        s.setLoading(false);
+      }
+    });
+
+    if (state.accessToken) {
+      state.refreshSession();
     } else {
-      store.setLoading(false);
+      state.setLoading(false);
     }
+
+    const safety = setTimeout(() => {
+      const s = useAuthStore.getState();
+      if (s.isLoading) s.setLoading(false);
+    }, 3000);
+
+    return () => {
+      unsub?.();
+      clearTimeout(safety);
+    };
   }, []);
 
   return (
