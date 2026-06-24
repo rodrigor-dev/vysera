@@ -30,7 +30,13 @@ export default function LoginPage() {
     );
   }
 
-  if (user) return null;
+  if (user) {
+    return (
+      <AuthFormLayout>
+        <LoadingSpinner size="lg" className="py-12" text="Redirecionando..." />
+      </AuthFormLayout>
+    );
+  }
 
   return (
     <AuthFormLayout title="Welcome back" subtitle="Sign in to your Vysera account">

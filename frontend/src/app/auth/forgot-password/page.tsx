@@ -27,7 +27,13 @@ export default function ForgotPasswordPage() {
     );
   }
 
-  if (user) return null;
+  if (user) {
+    return (
+      <AuthFormLayout>
+        <LoadingSpinner size="lg" className="py-12" text="Redirecionando..." />
+      </AuthFormLayout>
+    );
+  }
 
   return (
     <AuthFormLayout title="Reset password" subtitle="No worries, we'll send you reset instructions">

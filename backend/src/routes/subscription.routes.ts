@@ -50,6 +50,57 @@ router.get('/active', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/usage', async (req: Request, res: Response) => {
+  try {
+    const plan = getUserPlan({
+      role: (req.user as any).role || 'user',
+      proExpiresAt: (req.user as any).proExpiresAt || null,
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
+    const [projects, dailyExports, monthlyUploads] = await Promise.all([
+      prisma.project.count({ where: { userId: req.user!.userId, isArchived: false } }),
+      prisma.export.count({
+        where: {
+          userId: req.user!.userId,
+          createdAt: { gte: today, lt: tomorrow },
+        },
+      }),
+      prisma.upload.count({
+        where: {
+          userId: req.user!.userId,
+          createdAt: { gte: monthStart },
+        },
+      }),
+    ]);
+
+    res.json({
+      plan: {
+        id: plan.id,
+        name: plan.name,
+        features: plan.features,
+        price: plan.price,
+      },
+      usage: {
+        projects: { used: projects, limit: plan.features.maxProjects },
+        exportsToday: { used: dailyExports, limit: plan.features.maxExportsPerDay },
+        uploadsThisMonth: { used: monthlyUploads, limit: plan.features.maxUploadsPerMonth },
+      },
+    });
+  } catch (error) {
+    logger.error('Get plan usage error', { error: (error as Error).message });
+    res.status(500).json({ error: 'Failed to get plan usage' });
+  }
+});
+
 router.get('/plans', (_req: Request, res: Response) => {
   const plans = Object.values(PLANS).map((p) => ({
     id: p.id,

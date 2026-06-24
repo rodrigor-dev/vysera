@@ -30,7 +30,13 @@ export default function RegisterPage() {
     );
   }
 
-  if (user) return null;
+  if (user) {
+    return (
+      <AuthFormLayout>
+        <LoadingSpinner size="lg" className="py-12" text="Redirecionando..." />
+      </AuthFormLayout>
+    );
+  }
 
   return (
     <AuthFormLayout title="Create your account" subtitle="Get started with Vysera">

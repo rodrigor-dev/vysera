@@ -7,8 +7,9 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentProjects } from "@/components/dashboard/recent-projects";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Video, Upload, LayoutTemplate, Sparkles, ArrowRight,
+  Video, Upload, LayoutTemplate, ArrowRight,
   FolderKanban, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
@@ -64,14 +65,19 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [stats, setStats] = useState<{ label: string; value: string; icon: React.ReactNode; trend: number; trendLabel: string }[] | null>(null);
+  const [planUsage, setPlanUsage] = useState<{
+    plan: { id: string; name: string };
+    usage: Record<string, { used: number; limit: number }>;
+  } | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const [projRes, statsRes] = await Promise.all([
+        const [projRes, statsRes, usageRes] = await Promise.all([
           fetch("/api/user/projects?limit=5", { credentials: "include" }),
           fetch("/api/user/dashboard", { credentials: "include" }),
+          fetch("/api/subscriptions/usage", { credentials: "include" }),
         ]);
         if (projRes.ok) {
           const data = await projRes.json();
@@ -88,6 +94,10 @@ export default function DashboardPage() {
               { label: "Uploads", value: String(s.totalUploads ?? 0), icon: <Upload className="h-5 w-5" />, trend: 0, trendLabel: "files uploaded" },
             ]);
           }
+        }
+        if (usageRes.ok) {
+          const data = await usageRes.json();
+          setPlanUsage(data);
         }
       } catch (err) {
         setError(err instanceof Error ? err : new Error("Unknown error"));
@@ -120,6 +130,50 @@ export default function DashboardPage() {
       <motion.div variants={itemVariants}>
         <StatsCards isLoading={isLoading} />
       </motion.div>
+
+      {planUsage && (
+        <motion.div variants={itemVariants} className="premium-card p-5">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Seu plano</h2>
+                <Badge variant={planUsage.plan.id === "free" ? "secondary" : "default"}>
+                  {planUsage.plan.name}
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground/70">
+                Limites aplicados automaticamente no backend para proteger custos e liberar cobrança mensal.
+              </p>
+            </div>
+            {planUsage.plan.id === "free" && (
+              <Button asChild>
+                <Link href="/dashboard/upgrade">Fazer upgrade PRO</Link>
+              </Button>
+            )}
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {[
+              ["Projetos", planUsage.usage.projects],
+              ["Exports hoje", planUsage.usage.exportsToday],
+              ["Uploads no mês", planUsage.usage.uploadsThisMonth],
+            ].map(([label, item]) => {
+              const usage = item as { used: number; limit: number };
+              const pct = usage.limit > 0 ? Math.min(100, Math.round((usage.used / usage.limit) * 100)) : 0;
+              return (
+                <div key={label as string} className="rounded-xl border border-border/50 bg-background/50 p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{label as string}</span>
+                    <span className="text-muted-foreground">{usage.used}/{usage.limit}</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       <motion.div variants={itemVariants}>
         <h2 className="mb-4 text-lg font-semibold">Quick Actions</h2>

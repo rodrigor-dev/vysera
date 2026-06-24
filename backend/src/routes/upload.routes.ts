@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import Busboy from 'busboy';
 import { authenticate } from '../middleware/auth';
 import { createRateLimiter } from '../middleware/security';
+import { requireUploadLimit } from '../middleware/plan-guard';
 import * as uploadService from '../services/upload.service';
 import logger from '../config/logger';
 
@@ -39,7 +40,6 @@ function parseUpload(
     }
     fileFound = true;
     fileName = info.filename;
-    fileMime = info.mimeType;
     fileMime = info.mimeType;
 
     const chunks: Buffer[] = [];
@@ -115,15 +115,15 @@ function contentTypeFilter(allowedPrefixes: string[]) {
   };
 }
 
-router.post('/video', contentTypeFilter(['multipart/form-data']), uploadLimiter, (req: Request, res: Response) => {
+router.post('/video', contentTypeFilter(['multipart/form-data']), uploadLimiter, requireUploadLimit, (req: Request, res: Response) => {
   parseUpload(req, res, 'video');
 });
 
-router.post('/audio', contentTypeFilter(['multipart/form-data']), uploadLimiter, (req: Request, res: Response) => {
+router.post('/audio', contentTypeFilter(['multipart/form-data']), uploadLimiter, requireUploadLimit, (req: Request, res: Response) => {
   parseUpload(req, res, 'audio');
 });
 
-router.post('/image', contentTypeFilter(['multipart/form-data']), uploadLimiter, (req: Request, res: Response) => {
+router.post('/image', contentTypeFilter(['multipart/form-data']), uploadLimiter, requireUploadLimit, (req: Request, res: Response) => {
   parseUpload(req, res, 'image');
 });
 
